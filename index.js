@@ -3,12 +3,17 @@ const DEFAULT_DATA_SERVER = 'https://comntr.live:42751';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
 
-const $ = selector => document.querySelector(selector);
+let gTopic = null; // SHA1
+
 const log = (...args) => console.log(...args);
+const $ = selector => document.querySelector(selector);
 
 log('Waiting for window.onload event.');
-window.onload = () => renderComments();
 window.onhashchange = () => renderComments();
+window.onload = () => {
+  $.comments = $('#all-comments');
+  renderComments();
+};
 
 async function renderComments() {
   let topicId = location.hash.slice(1);
@@ -44,6 +49,7 @@ async function renderComments() {
     log('SHA1:', topicId);
   }
 
+  gTopic = topicId;
   getComments(topicId);
 
   buttonAdd.onclick = async () => {
@@ -51,9 +57,9 @@ async function renderComments() {
     let textarea = $('#comment');
     let text = textarea.value.trim();
     try {
-      await postComment(topicId, text);
+      let hash = await postComment(text, topicId);
       textarea.value = '';
-      await getComments(topicId);
+      $.comments.innerHTML += makeCommentHtml(text, hash);
     } finally {
       buttonAdd.disabled = false;
     }
@@ -73,28 +79,27 @@ async function getServer() {
     DEFAULT_DATA_SERVER;
 }
 
-async function postComment(topicId, text) {
+async function postComment(text, topicId = gTopic) {
   let status = $('#status');
-
   status.textContent = 'Prepairing comment.';
 
   try {
     if (!text) throw new Error('Cannot post empty comments.');
-    let commId = await sha1(text);
+    let hash = await sha1(text);
     let host = await getServer();
-    let url = host + '/' + topicId + '/' + commId;
+    let url = host + '/' + topicId + '/' + hash;
     status.textContent = 'Posting comment.';
     let rsp = await fetch(url, { method: 'POST', body: text });
     status.textContent = rsp.status + ' ' + rsp.statusText;
-    if (!rsp.ok) throw new Error(stats.textContent);
+    if (!rsp.ok) throw new Error(status.textContent);
+    return hash;
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
   }
 }
 
-async function getComments(topicId) {
+async function getComments(topicId = gTopic) {
   let status = $('#status');
-  let comments = $('#all-comments');
 
   if (!SHA1_PATTERN.test(topicId))
     throw new Error('Invalid topic id: ' + topicId);
@@ -104,24 +109,40 @@ async function getComments(topicId) {
     let host = await getServer();
     let url = host + '/' + topicId;
     status.textContent = 'Fetching comments.';
-    let time = Date.now();
+    let ctime = Date.now();
     let rsp = await fetch(url);
-    status.textContent = rsp.status + ' ' + rsp.statusText
-      + ' in ' + (Date.now() - time) + ' ms';
+    log(rsp.status, rsp.statusText);
+    status.textContent = rsp.status + ' ' + rsp.statusText;
+
     if (rsp.status != 200) return;
 
-    let json = JSON.parse(await rsp.text());
-    comments.innerHTML = '';
+    let body = await rsp.text();
+    let stime = rsp.headers.get('Duration');
+
+    ctime = Date.now() - ctime;
+    log('Server time:', stime, 'ms');
+    log('Request time:', ctime - stime, 'ms');
+
+    let json = JSON.parse(body);
+    let rtime = Date.now();
+    let htmls = [];
 
     for (let hash in json) {
       let text = json[hash];
-      let div = `<div id="${hash}">${text}</div>`;
-      comments.innerHTML += div;
+      htmls.push(makeCommentHtml(text, hash));
     }
+
+    $.comments.innerHTML = htmls.join('');
+    rtime = Date.now() - rtime;
+    log('Render time:', rtime, 'ms');
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
   }
-};
+}
+
+function makeCommentHtml(text, hash) {
+  return `<div>${text}</div>`;
+}
 
 function sha1(str) {
   let bytes = new Uint8Array(str.length);
