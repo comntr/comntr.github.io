@@ -15,6 +15,6 @@ body {
 
 #all-comments > div {
   margin: 5pt 0;
-  border: 1px solid #ccc;
   padding: 5pt;
+  border: 1px solid #ccc;
 }

@@ -1,24 +1,28 @@
-const DATA_SERVER = 'https://comntr.live:42751';
+const QUERY_PARAM_DATA_SERVER = 's';
+const DEFAULT_DATA_SERVER = 'https://comntr.live:42751';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
+const URL_PATTERN = /^https?:\/\//;
 
 const $ = selector => document.querySelector(selector);
 const log = (...args) => console.log(...args);
 
 log('Waiting for window.onload event.');
-window.onload = () => renderComments(location.hash.slice(1));
+window.onload = () => renderComments();
+window.onhashchange = () => renderComments();
 
-async function renderComments(topicId) {
+async function renderComments() {
+  let topicId = location.hash.slice(1);
   log('Rendering comments for topic:', topicId);
 
   let buttonAdd = $('#post-comment');
-  let elTopicHash = $('#topic-hash');
+  let topicEl = $('#topic');
 
   if (!topicId) {
     let sampleUrl = 'http://example.com';
     let sampleId = await sha1(sampleUrl);
     let href1 = location.href + '#' + sampleUrl;
     let href2 = location.href + '#' + sampleId;
-    elTopicHash.innerHTML = [
+    topicEl.innerHTML = [
       'Specify URL or its SHA-1:',
       `<a href="${href1}">${href1}</a>`,
       `<a href="${href2}">${href2}</a>`,
@@ -26,10 +30,18 @@ async function renderComments(topicId) {
     return;
   }
 
+  document.title = 'Comntr - ' + topicId;
+
+  if (URL_PATTERN.test(topicId)) {
+    topicEl.innerHTML = `URL: <a href="${topicId}">${topicId}</a>`;
+  } else {
+    topicEl.textContent = topicId;
+  }
+
   if (!SHA1_PATTERN.test(topicId)) {
-    log('This is not a valid topic id:', topicId);
-    elTopicHash.title = topicId;
+    log('Getting SHA1 of the topic:', topicId);
     topicId = await sha1(topicId);
+    log('SHA1:', topicId);
   }
 
   getComments(topicId);
@@ -48,8 +60,17 @@ async function renderComments(topicId) {
   };
 }
 
+function getQueryParam(name) {
+  let args = location.search.slice(1).split('&');
+  let arg = args.find(s => s.startsWith(name + '='));
+  let value = arg && arg.slice(name.length + 1);
+  log('Query: ?' + name + '=', value);
+  return value;
+}
+
 async function getServer() {
-  return DATA_SERVER;
+  return getQueryParam(QUERY_PARAM_DATA_SERVER) ||
+    DEFAULT_DATA_SERVER;
 }
 
 async function postComment(topicId, text) {
@@ -74,31 +95,28 @@ async function postComment(topicId, text) {
 async function getComments(topicId) {
   let status = $('#status');
   let comments = $('#all-comments');
-  let elTopicHash = $('#topic-hash');
 
   if (!SHA1_PATTERN.test(topicId))
     throw new Error('Invalid topic id: ' + topicId);
 
   try {
     status.textContent = 'Prepairing request.';
-    let href = location.origin + '#' + topicId;
-    elTopicHash.innerHTML = `<a href="${href}">${topicId}</a>`;
     let host = await getServer();
     let url = host + '/' + topicId;
     status.textContent = 'Fetching comments.';
+    let time = Date.now();
     let rsp = await fetch(url);
-    status.textContent = rsp.status + ' ' + rsp.statusText;
+    status.textContent = rsp.status + ' ' + rsp.statusText
+      + ' in ' + (Date.now() - time) + ' ms';
     if (rsp.status != 200) return;
 
     let json = JSON.parse(await rsp.text());
-    status.textContent = '';
     comments.innerHTML = '';
 
     for (let hash in json) {
-      comments.innerHTML += `
-      <div id="${hash}">
-        ${json[hash]}
-      </div>`;
+      let text = json[hash];
+      let div = `<div id="${hash}">${text}</div>`;
+      comments.innerHTML += div;
     }
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
