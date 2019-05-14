@@ -181,8 +181,16 @@ function parseCommentBody(body, hash) {
   return { date, parent, text, hash };
 }
 
-function makeCommentHtml({ text, date }) {
-  return `<div><div>${date.toJSON()}</div><div>${text}</div></div>`;
+function makeCommentHtml({ text, date, hash }) {
+  return `
+    <div class="cm">
+      <div class="hd">
+        <div class="u">User123</div>
+        <div class="ts">${date.toLocaleTimeString()}</div>
+        <div class="r">Reply</div>
+      </div>
+      <div class="ct">${text}</div>
+    </div>`;
 }
 
 function sha1(str) {

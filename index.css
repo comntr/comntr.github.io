@@ -13,8 +13,33 @@ body {
   width: 100%;
 }
 
-#all-comments > div {
+.cm {
   margin: 5pt 0;
   padding: 5pt;
   border: 1px solid #ccc;
+}
+
+.cm > .hd {
+  color: #888;
+  font-size: 0.7em;
+  display: flex;
+  flex-direction: row;
+}
+
+.hd {
+  margin-bottom: 5pt;
+}
+
+.hd > * {
+  margin-right: 5pt;
+}
+
+.hd > .u {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hd > .r {
+  text-decoration: underline;
+  cursor: pointer;
 }
