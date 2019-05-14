@@ -2,6 +2,9 @@ const QUERY_PARAM_DATA_SERVER = 's';
 const DEFAULT_DATA_SERVER = 'https://comntr.live:42751';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
+const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
+const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
+const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 
 let gTopic = null; // SHA1
 
@@ -57,9 +60,14 @@ async function renderComments() {
     let textarea = $('#comment');
     let text = textarea.value.trim();
     try {
-      let hash = await postComment(text, topicId);
+      let { hash, body } = await postComment(text, topicId);
       textarea.value = '';
-      $.comments.innerHTML += makeCommentHtml(text, hash);
+      let html = makeCommentHtml(parseCommentBody(body, hash));
+      let cont = document.createElement('div');
+      cont.innerHTML = html;
+      let div = cont.firstChild;
+      cont.innerHTML = '';
+      $.comments.insertBefore(div, $.comments.firstChild);
     } finally {
       buttonAdd.disabled = false;
     }
@@ -85,17 +93,28 @@ async function postComment(text, topicId = gTopic) {
 
   try {
     if (!text) throw new Error('Cannot post empty comments.');
-    let hash = await sha1(text);
+    let body = await makeCommentBody(text, topicId);
+    let hash = await sha1(body);
     let host = await getServer();
     let url = host + '/' + topicId + '/' + hash;
     status.textContent = 'Posting comment.';
-    let rsp = await fetch(url, { method: 'POST', body: text });
+    log('Sending comment:', JSON.stringify(body));
+    let rsp = await fetch(url, { method: 'POST', body });
     status.textContent = rsp.status + ' ' + rsp.statusText;
     if (!rsp.ok) throw new Error(status.textContent);
-    return hash;
+    return { hash, body };
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
   }
+}
+
+async function makeCommentBody(text, topicId = gTopic) {
+  return [
+    'Date: ' + new Date().toISOString(),
+    'Parent: ' + topicId,
+    '',
+    text,
+  ].join('\n');
 }
 
 async function getComments(topicId = gTopic) {
@@ -126,10 +145,24 @@ async function getComments(topicId = gTopic) {
     let json = JSON.parse(body);
     let rtime = Date.now();
     let htmls = [];
+    let comments = [];
 
     for (let hash in json) {
-      let text = json[hash];
-      htmls.push(makeCommentHtml(text, hash));
+      try {
+        let body = json[hash];
+        let parsed = parseCommentBody(body, hash);
+        comments.push(parsed);
+      } catch (error) {
+        log('Bad comment:', error)
+      }
+    }
+
+    log('Comments:', comments.length);
+    comments.sort((c1, c2) => c2.date - c1.date);
+
+    for (let parsed of comments) {
+      let html = makeCommentHtml(parsed);
+      htmls.push(html);
     }
 
     $.comments.innerHTML = htmls.join('');
@@ -140,8 +173,16 @@ async function getComments(topicId = gTopic) {
   }
 }
 
-function makeCommentHtml(text, hash) {
-  return `<div>${text}</div>`;
+function parseCommentBody(body, hash) {
+  let [, date] = COMMENT_DATE_PATTERN.exec(body);
+  let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
+  let [, text] = COMMENT_BODY_PATTERN.exec(body);
+  date = new Date(date);
+  return { date, parent, text, hash };
+}
+
+function makeCommentHtml({ text, date }) {
+  return `<div><div>${date.toJSON()}</div><div>${text}</div></div>`;
 }
 
 function sha1(str) {
