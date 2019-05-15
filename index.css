@@ -14,32 +14,29 @@ body {
 }
 
 .cm {
-  margin: 5pt 0;
-  padding: 5pt;
-  border: 1px solid #ccc;
-}
-
-.cm > .hd {
-  color: #888;
-  font-size: 0.7em;
-  display: flex;
-  flex-direction: row;
+  margin: 10pt 0;
 }
 
 .hd {
-  margin-bottom: 5pt;
+  color: #888;
+  font-size: 0.7em;
+  user-select: none;
 }
 
 .hd > * {
   margin-right: 5pt;
 }
 
-.hd > .u {
+.u, .c {
   text-decoration: underline;
   cursor: pointer;
 }
 
-.hd > .r {
+.r {
   text-decoration: underline;
   cursor: pointer;
+}
+
+.sub {
+  margin-left: 10pt;
 }

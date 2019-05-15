@@ -7,16 +7,52 @@ const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
 const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 
 let gTopic = null; // SHA1
+let gQuery = {};
 
 const log = (...args) => console.log(...args);
+log.e = (...args) => console.error(...args);
 const $ = selector => document.querySelector(selector);
 
 log('Waiting for window.onload event.');
-window.onhashchange = () => renderComments();
-window.onload = () => {
-  $.comments = $('#all-comments');
+window.onhashchange = () => {
+  resetComments();
   renderComments();
 };
+window.onload = () => {
+  gQuery = getQueryParams();
+  log('Query params:', gQuery);
+  $.comments = $('#all-comments');
+  $.comments.onclick = event => handleCommentsClick(event.target);
+  renderComments();
+};
+
+function resetComments() {
+  log('Resetting comments.');
+  $.comments.innerHTML = '';
+}
+
+function isCollapseButton(x) {
+  return x && x.className == 'c';
+}
+
+function isCommentContainer(x) {
+  return x && x.className == 'cm';
+}
+
+function handleCommentsClick(target) {
+  if (isCollapseButton(target)) {
+    let comm = target;
+    while (comm && !isCommentContainer(comm))
+      comm = comm.parentElement;
+    log('(Un)collapsing', comm.id);
+    let subc = comm.querySelector('.sub');
+    if (subc) {
+      let disp = subc.style.display;
+      subc.style.display = !disp ? 'none' : '';
+      target.textContent = !disp ? 'Uncollapse' : 'Collapse';
+    }
+  }
+}
 
 async function renderComments() {
   let topicId = location.hash.slice(1);
@@ -60,13 +96,10 @@ async function renderComments() {
     let textarea = $('#comment');
     let text = textarea.value.trim();
     try {
-      let { hash, body } = await postComment(text, topicId);
+      let { hash, body } = await postComment({ text, topicId });
       textarea.value = '';
       let html = makeCommentHtml(parseCommentBody(body, hash));
-      let cont = document.createElement('div');
-      cont.innerHTML = html;
-      let div = cont.firstChild;
-      cont.innerHTML = '';
+      let div = renderHtmlAsElement(html);
       $.comments.insertBefore(div, $.comments.firstChild);
     } finally {
       buttonAdd.disabled = false;
@@ -74,12 +107,29 @@ async function renderComments() {
   };
 }
 
-function getQueryParam(name) {
+function renderHtmlAsElement(html) {
+  let container = document.createElement('div');
+  container.innerHTML = html;
+  let element = container.children[0];
+  container.innerHTML = '';
+  return element;
+}
+
+function getQueryParams() {
+  let dict = {};
   let args = location.search.slice(1).split('&');
-  let arg = args.find(s => s.startsWith(name + '='));
-  let value = arg && arg.slice(name.length + 1);
-  log('Query: ?' + name + '=', value);
-  return value;
+  for (let arg of args) {
+    let i = arg.indexOf('=');
+    if (i < 0) i = arg.length;
+    let name = decodeURIComponent(arg.slice(0, i));
+    let value = decodeURIComponent(arg.slice(i + 1));
+    dict[name] = value;
+  }
+  return dict;
+}
+
+function getQueryParam(name) {
+  return gQuery[name];
 }
 
 async function getServer() {
@@ -87,13 +137,13 @@ async function getServer() {
     DEFAULT_DATA_SERVER;
 }
 
-async function postComment(text, topicId = gTopic) {
+async function postComment({ text, parent = gTopic, topicId = gTopic }) {
   let status = $('#status');
   status.textContent = 'Prepairing comment.';
 
   try {
     if (!text) throw new Error('Cannot post empty comments.');
-    let body = await makeCommentBody(text, topicId);
+    let body = await makeCommentBody({ text, parent });
     let hash = await sha1(body);
     let host = await getServer();
     let url = host + '/' + topicId + '/' + hash;
@@ -108,10 +158,25 @@ async function postComment(text, topicId = gTopic) {
   }
 }
 
-async function makeCommentBody(text, topicId = gTopic) {
+async function postRandomComments({ size = 100, prefix = 'x' }) {
+  let hashes = [gTopic];
+
+  for (let i = 0; i < size; i++) {
+    let parent = hashes[Math.random() * hashes.length | 0];
+
+    let { hash } = await postComment({
+      text: prefix + i,
+      parent: parent,
+    });
+
+    hashes.push(hash);
+  }
+}
+
+async function makeCommentBody({ text, parent = gTopic }) {
   return [
     'Date: ' + new Date().toISOString(),
-    'Parent: ' + topicId,
+    'Parent: ' + parent,
     '',
     text,
   ].join('\n');
@@ -144,31 +209,46 @@ async function getComments(topicId = gTopic) {
 
     let json = JSON.parse(body);
     let rtime = Date.now();
-    let htmls = [];
     let comments = [];
+    let byhash = {};
 
     for (let hash in json) {
       try {
         let body = json[hash];
         let parsed = parseCommentBody(body, hash);
         comments.push(parsed);
+        byhash[parsed.hash] = parsed;
       } catch (error) {
         log('Bad comment:', error)
       }
     }
 
     log('Comments:', comments.length);
-    comments.sort((c1, c2) => c2.date - c1.date);
+    let tree = { [gTopic]: [] };
 
-    for (let parsed of comments) {
-      let html = makeCommentHtml(parsed);
-      htmls.push(html);
+    for (let { hash, parent } of comments) {
+      tree[parent] = tree[parent] || [];
+      tree[parent].push(hash);
     }
 
-    $.comments.innerHTML = htmls.join('');
+    let render = phash => {
+      let htmls = [];
+      let hashes = tree[phash] || [];
+      hashes.sort((h1, h2) => byhash[h2].date - byhash[h1].date);
+      for (let chash of hashes) {
+        let subc = render(chash);
+        let comm = byhash[chash];
+        let html = makeCommentHtml({ ...comm, subc });
+        htmls.push(html);
+      }
+      return htmls.join('\n');
+    };
+
+    $.comments.innerHTML = render(gTopic);
     rtime = Date.now() - rtime;
     log('Render time:', rtime, 'ms');
   } catch (err) {
+    log.e(err);
     status.textContent = err && (err.stack || err.message || err);
   }
 }
@@ -181,15 +261,17 @@ function parseCommentBody(body, hash) {
   return { date, parent, text, hash };
 }
 
-function makeCommentHtml({ text, date, hash }) {
+function makeCommentHtml({ text, date, hash, subc = '' }) {
   return `
-    <div class="cm">
+    <div class="cm" id="cm-${hash}">
       <div class="hd">
-        <div class="u">User123</div>
-        <div class="ts">${date.toLocaleTimeString()}</div>
-        <div class="r">Reply</div>
+        <span class="u">User123</span>
+        <span class="ts">${date.toLocaleTimeString()}</span>
+        <span class="r">Reply</span>
+        <span class="c" style="${subc ? '' : 'display:none'}">Collapse</span>
       </div>
       <div class="ct">${text}</div>
+      <div class="sub">${subc}</div>
     </div>`;
 }
 
