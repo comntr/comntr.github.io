@@ -6,6 +6,8 @@ window.onbeforeunload = () => saveChanges();
 
 async function refreshList() {
   let hashes = gWatchlist.get();
+  if (hashes.length < 1) return;
+  
   let urls = hashes.map(h => gWatchlist.getUrl(h));
   let htmls = [];
 
