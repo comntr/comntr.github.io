@@ -4,6 +4,10 @@ body {
   margin: 8pt;
 }
 
+#topic {
+  word-break: break-all;
+}
+
 #topic-hash > a {
   text-decoration: none;
 }
@@ -15,6 +19,10 @@ body {
 
 .cm {
   margin: 10pt 0;
+}
+
+.ct {
+  word-break: break-all;
 }
 
 .hd {

@@ -1,0 +1,10 @@
+body {
+  font-family: Ubuntu, Arial, sans-serif;
+  font-size: 10pt;
+  margin: 8pt;
+}
+
+b {
+  cursor: pointer;
+  user-select: none;
+}
