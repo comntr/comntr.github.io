@@ -16,7 +16,15 @@ window.onhashchange = () => {
 };
 window.onload = () => {
   log('Query params:', gQuery);
+
   $.comments = $('#all-comments');
+  $.topic = $('#topic');
+
+  if (gQuery.ext) {
+    log('Launched as the extension popup.');
+    $.topic.style.display = 'none';
+  }
+
   $.comments.onclick = event => handleCommentsClick(event.target);
   renderComments();
 };
@@ -100,11 +108,11 @@ async function handlePostCommentButtonClick() {
     textarea.value = '';
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
-    $.comments.insertBefore(div, $.comments.firstChild);    
+    $.comments.insertBefore(div, $.comments.firstChild);
   } finally {
     buttonAdd.disabled = false;
   }
-  
+
   gWatchlist.add(gTopic, gURL);
 }
 
