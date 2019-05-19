@@ -32,9 +32,11 @@ async function refreshList() {
   for (let i = 0; i < hashes.length; i++) {
     let hash = hashes[i];
     let count = counts[i];
+    let lastSeen = gWatchlist.getSize(hash);
+    let diff = count - lastSeen;
     let selector = `div#_${hash} > span`;
     let span = document.querySelector(selector);
-    span.textContent = count + ' comments';
+    span.textContent = '+' + diff + ' new comments';
   }
 }
 

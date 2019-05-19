@@ -6,6 +6,7 @@ const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 
 let gURL = null;
 let gTopic = null; // SHA1
+let gComments = null; // sha1 -> data
 
 const $ = selector => document.querySelector(selector);
 
@@ -32,6 +33,7 @@ window.onload = () => {
 function resetComments() {
   log('Resetting comments.');
   $.comments.innerHTML = '';
+  gComments = null;
 }
 
 function isCollapseButton(x) {
@@ -93,8 +95,16 @@ async function renderComments() {
   }
 
   gTopic = topicId;
-  getComments(topicId);
   buttonAdd.onclick = () => handlePostCommentButtonClick();
+  await getComments(topicId);
+  markAllCommentsAsRead();
+}
+
+function markAllCommentsAsRead() {
+  if (!gWatchlist.isWatched(gTopic)) return;
+  let size = Object.keys(gComments || {}).length;
+  log(`Marking all ${size} comments as read.`);
+  gWatchlist.setSize(gTopic, size);
 }
 
 async function handlePostCommentButtonClick() {
@@ -114,6 +124,7 @@ async function handlePostCommentButtonClick() {
   }
 
   gWatchlist.add(gTopic, gURL);
+  markAllCommentsAsRead();
 }
 
 function renderHtmlAsElement(html) {
@@ -135,6 +146,7 @@ async function postComment({ text, parent = gTopic, topicId = gTopic }) {
     status.textContent = 'Posting comment.';
     await gDataServer.postComment(topicId, { hash, body });
     status.textContent = '';
+    gComments[hash] = body;
     return { hash, body };
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
@@ -175,6 +187,7 @@ async function getComments(topicId = gTopic) {
     status.textContent = 'Fetching comments.';
     let json = await gDataServer.fetchComments(topicId);
     status.textContent = '';
+    gComments = json;
 
     let rtime = Date.now();
     let comments = [];

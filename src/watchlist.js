@@ -17,6 +17,10 @@ class WatchList {
     return hash + '.url';
   }
 
+  static getSizeKey(hash) {
+    return hash + '.size';
+  }
+
   get() {
     let value = getValue(WATCHLIST_LSKEY);
     return !value ? [] : value.split(',');
@@ -37,6 +41,16 @@ class WatchList {
     return localStorage.getItem(key);
   }
 
+  setSize(hash, size) {
+    let key = WatchList.getSizeKey(hash);
+    setValue(key, size + '');
+  }
+
+  getSize(hash) {
+    let key = WatchList.getSizeKey(hash);
+    return +localStorage.getItem(key) || 0;
+  }
+
   add(hash, url) {
     log('Adding URL to the watchlist:', url);
     let hashes = this.get();
@@ -45,6 +59,10 @@ class WatchList {
     hashes.splice(0, 0, hash);
     this.set(hashes);
     if (url) this.setUrl(hash, url);
+  }
+
+  isWatched(hash) {
+    return !!this.getUrl(hash);
   }
 }
 
