@@ -7,7 +7,7 @@ window.onbeforeunload = () => saveChanges();
 async function refreshList() {
   let hashes = gWatchlist.get();
   if (hashes.length < 1) return;
-  
+
   let urls = hashes.map(h => gWatchlist.getUrl(h));
   let htmls = [];
 
@@ -19,7 +19,7 @@ async function refreshList() {
       <div id="_${hash}">
         <b id="${UNDO_ID_PREFIX + hash}" title="Unwatch">X</b>
         <span>? comments</span>
-        <a href="${href}">${href}</a>
+        <a href="/${href}">${href}</a>
       </div>`;
     htmls.push(html);
   }
