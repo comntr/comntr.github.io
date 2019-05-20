@@ -43,11 +43,12 @@ class DataServer {
     return JSON.parse(body);
   }
 
-  async fetchCommentsCount(topicId) {
+  async fetchCommentsCount(topics) {
     let host = getServer();
-    let url = host + '/' + topicId + '/size';
+    let url = host + '/rpc/GetCommentsCount';
+    let body = JSON.stringify(topics);
     log(url);
-    let rsp = await fetch(url);
+    let rsp = await fetch(url, { method: 'POST', body });
     log(rsp.status + ' ' + rsp.statusText);
 
     if (!rsp.ok) {
@@ -55,8 +56,7 @@ class DataServer {
       throw new Error(rsp.status + ' ' + rsp.statusText);
     }
 
-    let body = await rsp.text();
-    return parseInt(body);
+    return rsp.json();
   }
 }
 

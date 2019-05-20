@@ -25,9 +25,8 @@ async function refreshList() {
   }
 
   document.body.innerHTML = htmls.join('\n');
-
-  let fetches = hashes.map(h => gDataServer.fetchCommentsCount(h));
-  let counts = await Promise.all(fetches);
+  let counts = await gDataServer.fetchCommentsCount(hashes);
+  log('Counts:', counts);
 
   for (let i = 0; i < hashes.length; i++) {
     let hash = hashes[i];
