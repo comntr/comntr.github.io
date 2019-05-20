@@ -185,9 +185,9 @@ async function getComments(topicId = gTopic) {
 
   try {
     status.textContent = 'Fetching comments.';
-    let json = await gDataServer.fetchComments(topicId);
-    status.textContent = '';
+    let json = await gDataServer.fetchComments(topicId);    
 
+    log('Hashing comments.');
     let htime = Date.now();
     gComments = {};
     let tasks = json.map(
@@ -196,6 +196,7 @@ async function getComments(topicId = gTopic) {
     await Promise.all(tasks);
     log('Hashing time:', Date.now() - htime, 'ms');
 
+    log('Generating html.');
     let rtime = Date.now();
     let comments = [];
     let byhash = {};
@@ -211,7 +212,7 @@ async function getComments(topicId = gTopic) {
       }
     }
 
-    log('Comments:', comments.length);
+    log('Generating tree of comments:', comments.length);
     let tree = { [gTopic]: [] };
 
     for (let { hash, parent } of comments) {
@@ -235,6 +236,7 @@ async function getComments(topicId = gTopic) {
     $.comments.innerHTML = render(gTopic);
     rtime = Date.now() - rtime;
     log('Render time:', rtime, 'ms');
+    status.textContent = '';
   } catch (err) {
     log.e(err);
     status.textContent = err && (err.stack || err.message || err);
