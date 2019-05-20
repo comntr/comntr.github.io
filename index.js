@@ -187,15 +187,22 @@ async function getComments(topicId = gTopic) {
     status.textContent = 'Fetching comments.';
     let json = await gDataServer.fetchComments(topicId);
     status.textContent = '';
-    gComments = json;
+
+    let htime = Date.now();
+    gComments = {};
+    let tasks = json.map(
+        data => sha1(data).then(
+            hash => gComments[hash] = data));
+    await Promise.all(tasks);
+    log('Hashing time:', Date.now() - htime, 'ms');
 
     let rtime = Date.now();
     let comments = [];
     let byhash = {};
 
-    for (let hash in json) {
+    for (let hash in gComments) {
       try {
-        let body = json[hash];
+        let body = gComments[hash];
         let parsed = parseCommentBody(body, hash);
         comments.push(parsed);
         byhash[parsed.hash] = parsed;
