@@ -34,15 +34,11 @@ class DataServer {
     }
 
     let body = await rsp.text();
-    let stime = rsp.headers.get('Duration');
     let contentType = rsp.headers.get('Content-Type');
     let boundary = /\bboundary="(\w+)"/.exec(contentType)[1];
     let comments = body.split('\n--' + boundary + '\n');
 
-    ctime = Date.now() - ctime;
-    log('Server time:', stime, 'ms');
-    log('Request time:', ctime - stime, 'ms');
-
+    log('Request time:', Date.now() - ctime, 'ms');
     return comments;
   }
 
