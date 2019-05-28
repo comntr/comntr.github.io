@@ -20,13 +20,20 @@ class DataServer {
     }
   }
 
-  async fetchComments(topicId) {
+  async fetchComments(thash, xorhash) {
     let host = getServer();
-    let url = host + '/' + topicId;
+    let url = host + '/' + thash;
     let ctime = Date.now();
     log(url);
-    let rsp = await fetch(url);
+    let headers = new Headers;
+    if (xorhash) headers.append('If-None-Match', xorhash);
+    let rsp = await fetch(url, { headers });
     log(rsp.status + ' ' + rsp.statusText);
+
+    if (rsp.status == 304) {
+      log('Request time (304 Not Modified):', Date.now() - ctime, 'ms');
+      return [];
+    }
 
     if (!rsp.ok) {
       log(await rsp.text());

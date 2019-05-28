@@ -1,18 +1,10 @@
 const WATCHLIST_LSKEY = '.watchlist';
 
-function getValue(key) {
-  return localStorage.getItem(key) || '';
-}
-
-function setValue(key, value) {
-  if (value) {
-    localStorage.setItem(key, value);
-  } else {
-    localStorage.removeItem(key);
-  }
-}
-
 class WatchList {
+  constructor() {
+    this.lsentry = gStorage.getEntry(WATCHLIST_LSKEY); 
+  }
+
   static getUrlKey(hash) {
     return hash + '.url';
   }
@@ -22,28 +14,31 @@ class WatchList {
   }
 
   get() {
-    let value = getValue(WATCHLIST_LSKEY);
+    let value = this.lsentry.getValue();
     return !value ? [] : value.split(',');
   }
 
   set(hashes) {
     let value = hashes.join(',');
-    setValue(WATCHLIST_LSKEY, value);
+    this.lsentry.setValue(value);
   }
 
   setUrl(hash, url) {
     let key = WatchList.getUrlKey(hash);
-    setValue(key, url);
+    let lse = gStorage.getEntry(key);
+    lse.setValue(key, url);
   }
 
   getUrl(hash) {
     let key = WatchList.getUrlKey(hash);
-    return localStorage.getItem(key);
+    let lse = gStorage.getEntry(key);
+    return lse.getValue(key);
   }
 
   setSize(hash, size) {
     let key = WatchList.getSizeKey(hash);
-    setValue(key, size + '');
+    let lse = gStorage.getEntry(key);
+    lse.setValue(size + '');
   }
 
   getSize(hash) {
