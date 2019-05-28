@@ -42,8 +42,9 @@ class DataServer {
 
     let body = await rsp.text();
     let contentType = rsp.headers.get('Content-Type');
-    let boundary = /\bboundary="(\w+)"/.exec(contentType)[1];
-    let comments = body.split('\n--' + boundary + '\n');
+    let boundary = /\bboundary="(\w+)"/.exec(contentType);
+    if (!boundary) return [];
+    let comments = body.split('\n--' + boundary[1] + '\n');
 
     log('Request time:', Date.now() - ctime, 'ms');
     return comments;

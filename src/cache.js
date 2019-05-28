@@ -18,7 +18,7 @@ class LRUCache {
       let i = this.thash.findIndex(thash);
       this.thashes.splice(i, 1);
     } else {
-      log('Topic not cached yet:', thash);
+      log('Initializing topic cache:', thash);
       topic = new CachedTopic(thash);
       this.topics.set(thash, topic);
     }

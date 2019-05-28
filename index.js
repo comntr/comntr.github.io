@@ -20,6 +20,7 @@ window.onload = () => {
 
   $.comments = $('#all-comments');
   $.topic = $('#topic');
+  $.count = $('#comments-count');
 
   if (gQuery.ext) {
     log('Launched as the extension popup.');
@@ -30,9 +31,14 @@ window.onload = () => {
   renderComments();
 };
 
+function updateCommentsCount() {
+  $.count.textContent = Object.keys(gComments).length + ' comments';
+}
+
 function resetComments() {
   log('Resetting comments.');
   $.comments.innerHTML = '';
+  $.count.innerHTML = '';
   gComments = null;
 }
 
@@ -147,13 +153,14 @@ async function postComment({ text, parent = gTopic, topicId = gTopic }) {
     await gDataServer.postComment(topicId, { hash, body });
     status.textContent = '';
     gComments[hash] = body;
+    updateCommentsCount();
     return { hash, body };
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
   }
 }
 
-async function postRandomComments({ size = 100, prefix = 'x' }) {
+async function postRandomComments({ size = 100, prefix = 'test-' } = {}) {
   let hashes = [gTopic];
 
   for (let i = 0; i < size; i++) {
@@ -214,6 +221,7 @@ async function getComments(thash = gTopic) {
     await Promise.all(tasks);
     tcache.setCommentHashes(Object.keys(gComments));    
     log('Hashing time:', Date.now() - htime, 'ms');
+    updateCommentsCount();
 
     log('Generating html.');
     let rtime = Date.now();
