@@ -20,6 +20,7 @@ window.onload = () => {
 
   $.comments = $('#all-comments');
   $.topic = $('#topic');
+  $.count = $('#comments-count');
 
   if (gQuery.ext) {
     log('Launched as the extension popup.');
@@ -30,9 +31,14 @@ window.onload = () => {
   renderComments();
 };
 
+function updateCommentsCount() {
+  $.count.textContent = Object.keys(gComments).length + ' comments';
+}
+
 function resetComments() {
   log('Resetting comments.');
   $.comments.innerHTML = '';
+  $.count.innerHTML = '';
   gComments = null;
 }
 
@@ -119,6 +125,10 @@ async function handlePostCommentButtonClick() {
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
     $.comments.insertBefore(div, $.comments.firstChild);
+    updateCommentsCount();
+    let tcache = gCache.getTopic(gTopic);
+    tcache.addComment(hash, body);
+    tcache.setCommentHashes([hash, ...tcache.getCommentHashes()]);
   } finally {
     buttonAdd.disabled = false;
   }
@@ -153,7 +163,7 @@ async function postComment({ text, parent = gTopic, topicId = gTopic }) {
   }
 }
 
-async function postRandomComments({ size = 100, prefix = 'x' }) {
+async function postRandomComments({ size = 100, prefix = 'test-' } = {}) {
   let hashes = [gTopic];
 
   for (let i = 0; i < size; i++) {
@@ -177,24 +187,44 @@ async function makeCommentBody({ text, parent = gTopic }) {
   ].join('\n');
 }
 
-async function getComments(topicId = gTopic) {
+async function getComments(thash = gTopic) {
   let status = $('#status');
 
-  if (!SHA1_PATTERN.test(topicId))
-    throw new Error('Invalid topic id: ' + topicId);
+  if (!SHA1_PATTERN.test(thash))
+    throw new Error('Invalid topic id: ' + thash);
 
   try {
     status.textContent = 'Fetching comments.';
-    let json = await gDataServer.fetchComments(topicId);    
+    let tcache = gCache.getTopic(thash);
+    let xorhash = tcache.getXorHash();
+    log('Cached xorhash:', xorhash);
+    let list = await gDataServer.fetchComments(thash, xorhash);
 
     log('Hashing comments.');
     let htime = Date.now();
+    
     gComments = {};
-    let tasks = json.map(
-        data => sha1(data).then(
-            hash => gComments[hash] = data));
+
+    for (let chash of tcache.getCommentHashes()) {
+      let cbody = tcache.getCommentData(chash);
+      gComments[chash] = cbody;
+    }
+
+    let tasks = list.map(data => {
+      let chash = tcache.getCommentHash(data);
+      if (chash) {
+        gComments[chash] = data;
+        return;
+      }
+      return sha1(data).then(hash => {
+        gComments[hash] = data;
+        tcache.addComment(hash, data);
+      });
+    });
     await Promise.all(tasks);
+    tcache.setCommentHashes(Object.keys(gComments));    
     log('Hashing time:', Date.now() - htime, 'ms');
+    updateCommentsCount();
 
     log('Generating html.');
     let rtime = Date.now();
