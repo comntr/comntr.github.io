@@ -15,7 +15,7 @@ class LRUCache {
     let topic = this.topics.get(thash);
 
     if (topic) {
-      let i = this.thash.findIndex(thash);
+      let i = this.thashes.findIndex(h => h == thash);
       this.thashes.splice(i, 1);
     } else {
       log('Initializing topic cache:', thash);
@@ -70,7 +70,9 @@ class CachedTopic {
   setCommentHashes(list) {
     this.lsentry.setValue(list.join(LRU_CACHE_TOPICS_SEP));
     let xorh = xorall(list.map(hs2a));
-    if (xorh) this.lsxorhash.setValue(a2hs(xorh));
+    if (!xorh) return;
+    log('New cached xorhash:', a2hs(xorh));
+    this.lsxorhash.setValue(a2hs(xorh));
   }
 
   getXorHash() {

@@ -125,6 +125,10 @@ async function handlePostCommentButtonClick() {
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
     $.comments.insertBefore(div, $.comments.firstChild);
+    updateCommentsCount();
+    let tcache = gCache.getTopic(gTopic);
+    tcache.addComment(hash, body);
+    tcache.setCommentHashes([hash, ...tcache.getCommentHashes()]);
   } finally {
     buttonAdd.disabled = false;
   }
@@ -153,7 +157,6 @@ async function postComment({ text, parent = gTopic, topicId = gTopic }) {
     await gDataServer.postComment(topicId, { hash, body });
     status.textContent = '';
     gComments[hash] = body;
-    updateCommentsCount();
     return { hash, body };
   } catch (err) {
     status.textContent = err && (err.stack || err.message || err);
