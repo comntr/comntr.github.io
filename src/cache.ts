@@ -6,14 +6,16 @@ const LRU_CACHE_TOPICS_KEY = '.cache.topics';
 const LRU_CACHE_TOPICS_CAP = 100;
 const LRU_CACHE_TOPICS_SEP = ',';
 
+type THash = string;
+type CHash = string;
+
 class LRUCache {
-  private topics = new Map; // thash -> CachedTopic
+  private topics = new Map<THash, CachedTopic>();
   private lsentry = gStorage.getEntry(LRU_CACHE_TOPICS_KEY);
-  private thashes: string[];
+  private thashes: string[]; // The last used thash is at the end of the array.
 
   constructor() {
     let list = this.lsentry.getValue();
-    // The last used thash is at the end of the array.    
     this.thashes = !list ? [] : list.split(LRU_CACHE_TOPICS_SEP);
   }
 
@@ -48,25 +50,23 @@ class LRUCache {
   }
 }
 
+// <t-hash>.comments = [<c-hash>, <c-hash>, ...]
+// <t-hash>.xorhash = <...>
+// <c-hash>.data = <...>
 class CachedTopic {
   private lsentry: LSEntry;
   private lsxorhash: LSEntry;
 
   constructor(private thash: string) {
-    this.thash = thash;
     this.lsentry = gStorage.getEntry(thash + '.comments');
     this.lsxorhash = gStorage.getEntry(thash + '.xorhash');
   }
 
-  getCommentData(chash) {
+  getCommentData(chash: CHash) {
     return gStorage.getEntry(chash + '.data').getValue();
   }
 
-  getCommentHash(cdata) {
-    return gStorage.getEntry(cdata).getValue();
-  }
-
-  addComment(chash, cdata) {
+  addComment(chash: CHash, cdata: string) {
     gStorage.getEntry(chash + '.data').setValue(cdata);
     gStorage.getEntry(cdata).setValue(chash);
   }

@@ -220,12 +220,7 @@ async function getComments(thash = gTopic) {
       gComments[chash] = cbody;
     }
 
-    let tasks = list.map(data => {
-      let chash = tcache.getCommentHash(data);
-      if (chash) {
-        gComments[chash] = data;
-        return;
-      }
+    let tasks = list.map(data => {      
       return sha1(data).then(hash => {
         gComments[hash] = data;
         tcache.addComment(hash, data);
