@@ -20,11 +20,13 @@ $.comments = null as HTMLElement;
 $.topic = null as HTMLElement;
 $.count = null as HTMLElement;
 
-log('Waiting for window.onload event.');
+
 window.onhashchange = () => {
   resetComments();
   renderComments();
 };
+
+log('Waiting for window.onload event.');
 window.onload = () => {
   log('Query params:', gQuery);
 
@@ -40,6 +42,9 @@ window.onload = () => {
   $.comments.onclick = event => handleCommentsClick(event.target);
   renderComments();
 };
+
+if (document.body.textContent != '')
+  window.onload(null);
 
 function updateCommentsCount() {
   $.count.textContent = Object.keys(gComments).length + ' comments';
@@ -289,9 +294,7 @@ function makeCommentHtml({ text, date, hash, subc = '' }) {
   return `
     <div class="cm" id="cm-${hash}">
       <div class="hd">
-        <span class="u">User123</span>
         <span class="ts">${date.toLocaleTimeString()}</span>
-        <span class="r">Reply</span>
         <span class="c" style="${subc ? '' : 'display:none'}">Collapse</span>
       </div>
       <div class="ct">${text}</div>

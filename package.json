@@ -3,7 +3,7 @@
     "start": "npm run compile; npm run server",
     "clean": "rm -rf ./bin",
     "compile": "npm i; npm run clean; node_modules/.bin/tsc",
-    "server": "killall webfsd; sudo webfsd -F -p 80 -r . -f index.html"
+    "server": "killall -q webfsd; sudo webfsd -F -p 80 -r . -f index.html"
   },
   "devDependencies": {
     "typescript": "3.5.1"
