@@ -1,5 +1,5 @@
-function getQueryParams() {
-  let dict = {};
+function getQueryParams<T>(defaults: T) {
+  let dict = {...defaults};
   let args = location.search.slice(1).split('&');
   for (let arg of args) {
     let i = arg.indexOf('=');
@@ -11,8 +11,10 @@ function getQueryParams() {
   return dict;
 }
 
-function getQueryParam(name) {
+export function getQueryParam(name) {
   return gQuery[name];
 }
 
-const gQuery = getQueryParams();
+export const gQuery = getQueryParams({
+  ext: '',
+});

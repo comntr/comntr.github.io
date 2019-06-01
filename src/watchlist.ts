@@ -1,9 +1,10 @@
+import { log } from './log';
+import { gStorage } from './storage';
+
 const WATCHLIST_LSKEY = '.watchlist';
 
 class WatchList {
-  constructor() {
-    this.lsentry = gStorage.getEntry(WATCHLIST_LSKEY); 
-  }
+  private lsentry = gStorage.getEntry(WATCHLIST_LSKEY);
 
   static getUrlKey(hash) {
     return hash + '.url';
@@ -23,16 +24,16 @@ class WatchList {
     this.lsentry.setValue(value);
   }
 
-  setUrl(hash, url) {
+  setUrl(hash, url: string) {
     let key = WatchList.getUrlKey(hash);
     let lse = gStorage.getEntry(key);
-    lse.setValue(key, url);
+    lse.setValue(url);
   }
 
   getUrl(hash) {
     let key = WatchList.getUrlKey(hash);
     let lse = gStorage.getEntry(key);
-    return lse.getValue(key);
+    return lse.getValue();
   }
 
   setSize(hash, size) {
@@ -61,4 +62,4 @@ class WatchList {
   }
 }
 
-let gWatchlist = new WatchList;
+export const gWatchlist = new WatchList;
