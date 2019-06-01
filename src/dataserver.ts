@@ -1,3 +1,6 @@
+import { log } from './log';
+import { getQueryParam } from './config';
+
 const QUERY_PARAM_DATA_SERVER = 's';
 const DEFAULT_DATA_SERVER = 'https://comntr.live:42751';
 
@@ -67,4 +70,4 @@ class DataServer {
   }
 }
 
-const gDataServer = new DataServer;
+export const gDataServer = new DataServer;

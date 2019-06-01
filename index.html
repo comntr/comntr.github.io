@@ -4,14 +4,15 @@
 <head>
   <title>Comntr</title>
   <link rel="stylesheet" href="index.css">
-  <script src="/src/log.js"></script>
-  <script src="/src/config.js"></script>
-  <script src="/src/hashutil.js"></script>
-  <script src="/src/storage.js"></script>
-  <script src="/src/cache.js"></script>
-  <script src="/src/dataserver.js"></script>
-  <script src="/src/watchlist.js"></script>
-  <script src="index.js"></script>
+  <script src="/require.js"></script>
+  <script>
+    requirejs.config({
+      baseUrl: '/bin'
+    });
+    requirejs([
+      'index'
+    ]);
+  </script>
 </head>
 
 <body>

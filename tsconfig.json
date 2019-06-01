@@ -1,0 +1,26 @@
+{
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "bin"
+  ],
+  "compilerOptions": {
+    "outDir": "bin",
+    "baseUrl": "/",
+    "target": "es2017",
+    
+    "lib": [
+      "es2017",
+      "dom"
+    ],
+    "module": "amd",
+    "moduleResolution": "classic",
+    "sourceMap": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": false,
+    "noImplicitAny": false
+  },
+}

@@ -1,17 +1,23 @@
+import { xorall, hs2a, a2hs } from './hashutil';
+import { log } from './log';
+import { gStorage, LSEntry } from './storage';
+
 const LRU_CACHE_TOPICS_KEY = '.cache.topics';
 const LRU_CACHE_TOPICS_CAP = 100;
 const LRU_CACHE_TOPICS_SEP = ',';
 
 class LRUCache {
+  private topics = new Map; // thash -> CachedTopic
+  private lsentry = gStorage.getEntry(LRU_CACHE_TOPICS_KEY);
+  private thashes: string[];
+
   constructor() {
-    this.topics = new Map; // thash -> CachedTopic
-    this.lsentry = gStorage.getEntry(LRU_CACHE_TOPICS_KEY);
     let list = this.lsentry.getValue();
     // The last used thash is at the end of the array.    
     this.thashes = !list ? [] : list.split(LRU_CACHE_TOPICS_SEP);
   }
-  
-  getTopic(thash) {
+
+  getTopic(thash: string) {
     let topic = this.topics.get(thash);
 
     if (topic) {
@@ -31,7 +37,7 @@ class LRUCache {
       for (let h of removed) {
         log('Uncaching topic:', h);
         let t = this.topics[h];
-        this.topics.remove(h);
+        this.topics.delete(h);
         t.remove();
       }
     }
@@ -43,7 +49,10 @@ class LRUCache {
 }
 
 class CachedTopic {
-  constructor(thash) {
+  private lsentry: LSEntry;
+  private lsxorhash: LSEntry;
+
+  constructor(private thash: string) {
     this.thash = thash;
     this.lsentry = gStorage.getEntry(thash + '.comments');
     this.lsxorhash = gStorage.getEntry(thash + '.xorhash');
@@ -87,8 +96,8 @@ class CachedTopic {
       gStorage.getEntry(cdata).setValue(null);
     }
 
-    this.lsentry.setValue(null);    
+    this.lsentry.setValue(null);
   }
 }
 
-const gCache = new LRUCache;
+export const gCache = new LRUCache;

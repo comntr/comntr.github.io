@@ -1,3 +1,7 @@
+import { log } from 'src/log';
+import { gWatchlist } from 'src/watchlist';
+import { gDataServer } from 'src/dataserver';
+
 const UNDO_ID_PREFIX = 'uw-';
 
 window.onload = () => refreshList();

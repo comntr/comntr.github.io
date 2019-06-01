@@ -1,19 +1,19 @@
-class LSStorage {
-  getEntry(key) {
+export class LSStorage {
+  getEntry(key: string) {
     return new LSEntry(key);
   }
 }
 
-class LSEntry {
-  constructor(key) {
-    this.key = key;
+export class LSEntry {
+  constructor(private key: string) {
+
   }
 
   getValue() {
     return localStorage.getItem(this.key) || '';
   }
 
-  setValue(value) {
+  setValue(value: string) {
     if (value) {
       localStorage.setItem(this.key, value);
     } else {
@@ -22,4 +22,4 @@ class LSEntry {
   }
 }
 
-const gStorage = new LSStorage;
+export const gStorage = new LSStorage;

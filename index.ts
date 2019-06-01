@@ -1,3 +1,9 @@
+import { log } from 'src/log';
+import { gQuery } from 'src/config';
+import { gWatchlist } from 'src/watchlist';
+import { gCache } from 'src/cache';
+import { gDataServer } from 'src/dataserver';
+
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
 const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
@@ -8,7 +14,11 @@ let gURL = null;
 let gTopic = null; // SHA1
 let gComments = null; // sha1 -> data
 
-const $ = selector => document.querySelector(selector);
+const $ = (selector: string): HTMLElement => document.querySelector(selector);
+
+$.comments = null as HTMLElement;
+$.topic = null as HTMLElement;
+$.count = null as HTMLElement;
 
 log('Waiting for window.onload event.');
 window.onhashchange = () => {
@@ -114,9 +124,9 @@ function markAllCommentsAsRead() {
 }
 
 async function handlePostCommentButtonClick() {
-  let buttonAdd = $('#post-comment');
+  let buttonAdd = $('#post-comment') as HTMLButtonElement;
   buttonAdd.disabled = true;
-  let textarea = $('#comment');
+  let textarea = $('#comment') as HTMLTextAreaElement;
   let text = textarea.value.trim();
 
   try {
@@ -202,7 +212,7 @@ async function getComments(thash = gTopic) {
 
     log('Hashing comments.');
     let htime = Date.now();
-    
+
     gComments = {};
 
     for (let chash of tcache.getCommentHashes()) {
@@ -222,7 +232,7 @@ async function getComments(thash = gTopic) {
       });
     });
     await Promise.all(tasks);
-    tcache.setCommentHashes(Object.keys(gComments));    
+    tcache.setCommentHashes(Object.keys(gComments));
     log('Hashing time:', Date.now() - htime, 'ms');
     updateCommentsCount();
 
@@ -277,8 +287,7 @@ function parseCommentBody(body, hash) {
   let [, date] = COMMENT_DATE_PATTERN.exec(body);
   let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
   let [, text] = COMMENT_BODY_PATTERN.exec(body);
-  date = new Date(date);
-  return { date, parent, text, hash };
+  return { date: new Date(date), parent, text, hash };
 }
 
 function makeCommentHtml({ text, date, hash, subc = '' }) {
@@ -295,7 +304,7 @@ function makeCommentHtml({ text, date, hash, subc = '' }) {
     </div>`;
 }
 
-function sha1(str) {
+function sha1(str: string): Promise<string> {
   let bytes = new Uint8Array(str.length);
 
   for (let i = 0; i < str.length; i++)
