@@ -68,7 +68,6 @@ class CachedTopic {
 
   addComment(chash: CHash, cdata: string) {
     gStorage.getEntry(chash + '.data').setValue(cdata);
-    gStorage.getEntry(cdata).setValue(chash);
   }
 
   getCommentHashes() {
@@ -101,3 +100,5 @@ class CachedTopic {
 }
 
 export const gCache = new LRUCache;
+export const gComments = {};
+

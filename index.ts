@@ -3,6 +3,8 @@ import { gQuery } from 'src/config';
 import { gWatchlist } from 'src/watchlist';
 import { gCache } from 'src/cache';
 import { gDataServer } from 'src/dataserver';
+import { gSender } from 'src/sender';
+import { sha1 } from 'src/hashutil';
 
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -19,7 +21,7 @@ const $ = (selector: string): HTMLElement => document.querySelector(selector);
 $.comments = null as HTMLElement;
 $.topic = null as HTMLElement;
 $.count = null as HTMLElement;
-
+$.status = null as HTMLElement;
 
 window.onhashchange = () => {
   resetComments();
@@ -31,6 +33,7 @@ window.onload = () => {
   log('Query params:', gQuery);
 
   $.comments = $('#all-comments');
+  $.status = $('#status');
   $.topic = $('#topic');
   $.count = $('#comments-count');
 
@@ -88,7 +91,7 @@ async function renderComments() {
   let topicEl = $('#topic');
 
   if (!topicId) {
-    let sampleUrl = 'http://example.com';
+    let sampleUrl = 'http://example.com/';
     let sampleId = await sha1(sampleUrl);
     let href1 = location.href + '#' + sampleUrl;
     let href2 = location.href + '#' + sampleId;
@@ -135,15 +138,17 @@ async function handlePostCommentButtonClick() {
   let text = textarea.value.trim();
 
   try {
-    let { hash, body } = await postComment({ text });
+    let { hash, body } = await gSender.postComment({
+      text,
+      topic: gTopic,
+      parent: gTopic,
+      status: text => { $.status.textContent = text; },
+    });
     textarea.value = '';
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
     $.comments.insertBefore(div, $.comments.firstChild);
     updateCommentsCount();
-    let tcache = gCache.getTopic(gTopic);
-    tcache.addComment(hash, body);
-    tcache.setCommentHashes([hash, ...tcache.getCommentHashes()]);
   } finally {
     buttonAdd.disabled = false;
   }
@@ -158,48 +163,6 @@ function renderHtmlAsElement(html) {
   let element = container.children[0];
   container.innerHTML = '';
   return element;
-}
-
-async function postComment({ text, parent = gTopic, topicId = gTopic }) {
-  let status = $('#status');
-  status.textContent = 'Prepairing comment.';
-
-  try {
-    if (!text) throw new Error('Cannot post empty comments.');
-    let body = await makeCommentBody({ text, parent });
-    let hash = await sha1(body);
-    status.textContent = 'Posting comment.';
-    await gDataServer.postComment(topicId, { hash, body });
-    status.textContent = '';
-    gComments[hash] = body;
-    return { hash, body };
-  } catch (err) {
-    status.textContent = err && (err.stack || err.message || err);
-  }
-}
-
-async function postRandomComments({ size = 100, prefix = 'test-' } = {}) {
-  let hashes = [gTopic];
-
-  for (let i = 0; i < size; i++) {
-    let parent = hashes[Math.random() * hashes.length | 0];
-
-    let { hash } = await postComment({
-      text: prefix + i,
-      parent: parent,
-    });
-
-    hashes.push(hash);
-  }
-}
-
-async function makeCommentBody({ text, parent = gTopic }) {
-  return [
-    'Date: ' + new Date().toISOString(),
-    'Parent: ' + parent,
-    '',
-    text,
-  ].join('\n');
 }
 
 async function getComments(thash = gTopic) {
@@ -300,21 +263,4 @@ function makeCommentHtml({ text, date, hash, subc = '' }) {
       <div class="ct">${text}</div>
       <div class="sub">${subc}</div>
     </div>`;
-}
-
-function sha1(str: string): Promise<string> {
-  let bytes = new Uint8Array(str.length);
-
-  for (let i = 0; i < str.length; i++)
-    bytes[i] = str.charCodeAt(i) & 0xFF;
-
-  return new Promise(resolve => {
-    crypto.subtle.digest('SHA-1', bytes).then(buffer => {
-      let hash = Array.from(new Uint8Array(buffer)).map(byte => {
-        return ('0' + byte.toString(16)).slice(-2);
-      }).join('');
-
-      resolve(hash);
-    });
-  });
 }
