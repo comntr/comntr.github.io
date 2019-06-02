@@ -1,5 +1,5 @@
 import { log } from 'src/log';
-import { gQuery } from 'src/config';
+import { gConfig } from 'src/config';
 import { gWatchlist } from 'src/watchlist';
 import { gCache } from 'src/cache';
 import { gDataServer } from 'src/dataserver';
@@ -30,14 +30,14 @@ window.onhashchange = () => {
 
 log('Waiting for window.onload event.');
 window.onload = () => {
-  log('Query params:', gQuery);
+  log('Query params:', gConfig);
 
   $.comments = $('#all-comments');
   $.status = $('#status');
   $.topic = $('#topic');
   $.count = $('#comments-count');
 
-  if (gQuery.ext) {
+  if (gConfig.ext) {
     log('Launched as the extension popup.');
     $.topic.style.display = 'none';
   }
@@ -45,9 +45,6 @@ window.onload = () => {
   $.comments.onclick = event => handleCommentsClick(event.target);
   renderComments();
 };
-
-if (document.body.textContent != '')
-  window.onload(null);
 
 function updateCommentsCount() {
   $.count.textContent = Object.keys(gComments).length + ' comments';
@@ -138,11 +135,11 @@ async function handlePostCommentButtonClick() {
   let text = textarea.value.trim();
 
   try {
+    if (!text) throw new Error('Cannot send an empty comment.');
     let { hash, body } = await gSender.postComment({
       text,
       topic: gTopic,
       parent: gTopic,
-      status: text => { $.status.textContent = text; },
     });
     textarea.value = '';
     let html = makeCommentHtml(parseCommentBody(body, hash));
@@ -176,7 +173,13 @@ async function getComments(thash = gTopic) {
     let tcache = gCache.getTopic(thash);
     let xorhash = tcache.getXorHash();
     log('Cached xorhash:', xorhash);
-    let list = await gDataServer.fetchComments(thash, xorhash);
+    let list = [];
+
+    try {
+      list = await gDataServer.fetchComments(thash, xorhash);
+    } catch (err) {
+      log.e('Failed to get comments:', err);
+    }
 
     log('Hashing comments.');
     let htime = Date.now();
@@ -188,7 +191,7 @@ async function getComments(thash = gTopic) {
       gComments[chash] = cbody;
     }
 
-    let tasks = list.map(data => {      
+    let tasks = list.map(data => {
       return sha1(data).then(hash => {
         gComments[hash] = data;
         tcache.addComment(hash, data);

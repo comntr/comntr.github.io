@@ -26,11 +26,15 @@ export class LSEntry {
   }
 
   get json() {
-    return JSON.parse(this.getValue());
+    let text = this.text;
+    return text ? JSON.parse(text) : undefined;
   }
 
   set json(value) {
-    this.setValue(JSON.stringify(value));
+    if (value === undefined)
+      this.remove();
+    else
+      this.text = JSON.stringify(value);
   }
 
   get text() {

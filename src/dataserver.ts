@@ -1,30 +1,32 @@
 import { log } from './log';
-import { getQueryParam } from './config';
+import { gConfig } from './config';
 
-const QUERY_PARAM_DATA_SERVER = 's';
-const DEFAULT_DATA_SERVER = 'https://comntr.live:42751';
-
-function getServer() {
-  return getQueryParam(QUERY_PARAM_DATA_SERVER) ||
-    DEFAULT_DATA_SERVER;
+export class HttpError extends Error {
+  constructor(public status: number, public statusText: string) {
+    super(status + ' ' + statusText);
+  }
 }
 
 class DataServer {
   async postComment(topicId, { hash, body }) {
-    let host = getServer();
+    let host = gConfig.s;
     let url = host + '/' + topicId + '/' + hash;
     log(url, JSON.stringify(body));
+
+    if (gConfig.act > 0 && Math.random() < gConfig.act)
+      throw new HttpError(567, 'Throttled with ?act=' + gConfig.act);
+
     let rsp = await fetch(url, { method: 'POST', body });
     log(rsp.status + ' ' + rsp.statusText);
 
     if (!rsp.ok) {
       log(await rsp.text());
-      throw new Error(rsp.status + ' ' + rsp.statusText);
+      throw new HttpError(rsp.status, rsp.statusText);
     }
   }
 
   async fetchComments(thash, xorhash) {
-    let host = getServer();
+    let host = gConfig.s;
     let url = host + '/' + thash;
     let ctime = Date.now();
     log(url);
@@ -40,7 +42,7 @@ class DataServer {
 
     if (!rsp.ok) {
       log(await rsp.text());
-      throw new Error(rsp.status + ' ' + rsp.statusText);
+      throw new HttpError(rsp.status, rsp.statusText);
     }
 
     let body = await rsp.text();
@@ -54,7 +56,7 @@ class DataServer {
   }
 
   async fetchCommentsCount(topics) {
-    let host = getServer();
+    let host = gConfig.s;
     let url = host + '/rpc/GetCommentsCount';
     let body = JSON.stringify(topics);
     log(url);
@@ -63,7 +65,7 @@ class DataServer {
 
     if (!rsp.ok) {
       log(await rsp.text());
-      throw new Error(rsp.status + ' ' + rsp.statusText);
+      throw new HttpError(rsp.status, rsp.statusText);
     }
 
     return rsp.json();
