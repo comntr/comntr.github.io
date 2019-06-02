@@ -23,13 +23,12 @@ $.topic = null as HTMLElement;
 $.count = null as HTMLElement;
 $.status = null as HTMLElement;
 
-window.onhashchange = () => {
-  resetComments();
-  renderComments();
-};
+export function init() {
+  window.onhashchange = () => {
+    resetComments();
+    renderComments();
+  };
 
-log('Waiting for window.onload event.');
-window.onload = () => {
   log('Query params:', gConfig);
 
   $.comments = $('#all-comments');
@@ -43,8 +42,38 @@ window.onload = () => {
   }
 
   $.comments.onclick = event => handleCommentsClick(event.target);
+  gSender.commentStateChanged.addListener(e => {
+    if (e.thash == gTopic)
+      updateCommentState(e.chash);
+  });
   renderComments();
-};
+}
+
+function updateCommentState(chash) {
+  log('Updating comment state:', chash);
+  let cdiv = findCommentDivByHash(chash);
+  if (!cdiv) return;
+  let hdiv = cdiv.querySelector('.hd');
+  let sdiv = hdiv.querySelector('.st');
+  if (!sdiv) {
+    sdiv = document.createElement('span');
+    sdiv.classList.add('st');
+    hdiv.appendChild(sdiv);
+  }
+  let state = gSender.getCommentState(chash);
+  sdiv.setAttribute('state', state);
+  switch (state) {
+    case 'sent':
+      sdiv.innerHTML = 'Sent';
+      break;
+    case 'failed':
+      sdiv.innerHTML = 'Failed';
+      break;
+    case 'pending':
+      sdiv.innerHTML = 'Sending...';
+      break;
+  }
+}
 
 function updateCommentsCount() {
   $.count.textContent = Object.keys(gComments).length + ' comments';
@@ -119,6 +148,14 @@ async function renderComments() {
   buttonAdd.onclick = () => handlePostCommentButtonClick();
   await getComments(topicId);
   markAllCommentsAsRead();
+  updateAllCommentStates();
+}
+
+function updateAllCommentStates() {
+  let pending = gSender.getPendingComments(gTopic);
+  let failed = gSender.getFailedComments(gTopic);
+  for (let chash of [...pending, ...failed])
+    updateCommentState(chash);
 }
 
 function markAllCommentsAsRead() {
@@ -254,6 +291,10 @@ function parseCommentBody(body, hash) {
   let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
   let [, text] = COMMENT_BODY_PATTERN.exec(body);
   return { date: new Date(date), parent, text, hash };
+}
+
+function findCommentDivByHash(chash) {
+  return $('#cm-' + chash);
 }
 
 function makeCommentHtml({ text, date, hash, subc = '' }) {

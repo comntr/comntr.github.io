@@ -31,6 +31,5 @@ export class PeriodicTask {
       this.schedule();
       this.args.callback.call(null);
     }, delay * 1000 | 0);
-    log('Task scheduled in', delay | 0, 's');
   }
 };

@@ -9,7 +9,7 @@ export class HttpError extends Error {
 
 class DataServer {
   async postComment(topicId, { hash, body }) {
-    let host = gConfig.s;
+    let host = gConfig.srv;
     let url = host + '/' + topicId + '/' + hash;
     log(url, JSON.stringify(body));
 
@@ -26,7 +26,7 @@ class DataServer {
   }
 
   async fetchComments(thash, xorhash) {
-    let host = gConfig.s;
+    let host = gConfig.srv;
     let url = host + '/' + thash;
     let ctime = Date.now();
     log(url);
@@ -56,7 +56,7 @@ class DataServer {
   }
 
   async fetchCommentsCount(topics) {
-    let host = gConfig.s;
+    let host = gConfig.srv;
     let url = host + '/rpc/GetCommentsCount';
     let body = JSON.stringify(topics);
     log(url);

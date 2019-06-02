@@ -21,6 +21,7 @@ export function getQueryParam(name) {
 
 export const gConfig = getQueryParams({
   ext: false,
-  act: 0.0, // add-comment throttling
-  s: 'https://comntr.live:42751',
+  act: 0.0, // add-comment throttling: 0.99 would throttle 99% of attempts
+  srv: 'https://comntr.live:42751',
+  cri: 600, // interval in seconds between resending comments
 });
