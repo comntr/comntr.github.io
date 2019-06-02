@@ -1,8 +1,10 @@
 import { log } from 'src/log';
-import { gQuery } from 'src/config';
+import { gConfig } from 'src/config';
 import { gWatchlist } from 'src/watchlist';
 import { gCache } from 'src/cache';
 import { gDataServer } from 'src/dataserver';
+import { gSender } from 'src/sender';
+import { sha1 } from 'src/hashutil';
 
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -19,32 +21,59 @@ const $ = (selector: string): HTMLElement => document.querySelector(selector);
 $.comments = null as HTMLElement;
 $.topic = null as HTMLElement;
 $.count = null as HTMLElement;
+$.status = null as HTMLElement;
 
+export function init() {
+  window.onhashchange = () => {
+    resetComments();
+    renderComments();
+  };
 
-window.onhashchange = () => {
-  resetComments();
-  renderComments();
-};
-
-log('Waiting for window.onload event.');
-window.onload = () => {
-  log('Query params:', gQuery);
+  log('Query params:', gConfig);
 
   $.comments = $('#all-comments');
+  $.status = $('#status');
   $.topic = $('#topic');
   $.count = $('#comments-count');
 
-  if (gQuery.ext) {
+  if (gConfig.ext) {
     log('Launched as the extension popup.');
     $.topic.style.display = 'none';
   }
 
   $.comments.onclick = event => handleCommentsClick(event.target);
+  gSender.commentStateChanged.addListener(e => {
+    if (e.thash == gTopic)
+      updateCommentState(e.chash);
+  });
   renderComments();
-};
+}
 
-if (document.body.textContent != '')
-  window.onload(null);
+function updateCommentState(chash) {
+  log('Updating comment state:', chash);
+  let cdiv = findCommentDivByHash(chash);
+  if (!cdiv) return;
+  let hdiv = cdiv.querySelector('.hd');
+  let sdiv = hdiv.querySelector('.st');
+  if (!sdiv) {
+    sdiv = document.createElement('span');
+    sdiv.classList.add('st');
+    hdiv.appendChild(sdiv);
+  }
+  let state = gSender.getCommentState(chash);
+  sdiv.setAttribute('state', state);
+  switch (state) {
+    case 'sent':
+      sdiv.innerHTML = 'Sent';
+      break;
+    case 'failed':
+      sdiv.innerHTML = 'Failed';
+      break;
+    case 'pending':
+      sdiv.innerHTML = 'Sending...';
+      break;
+  }
+}
 
 function updateCommentsCount() {
   $.count.textContent = Object.keys(gComments).length + ' comments';
@@ -88,7 +117,7 @@ async function renderComments() {
   let topicEl = $('#topic');
 
   if (!topicId) {
-    let sampleUrl = 'http://example.com';
+    let sampleUrl = 'http://example.com/';
     let sampleId = await sha1(sampleUrl);
     let href1 = location.href + '#' + sampleUrl;
     let href2 = location.href + '#' + sampleId;
@@ -119,6 +148,14 @@ async function renderComments() {
   buttonAdd.onclick = () => handlePostCommentButtonClick();
   await getComments(topicId);
   markAllCommentsAsRead();
+  updateAllCommentStates();
+}
+
+function updateAllCommentStates() {
+  let pending = gSender.getPendingComments(gTopic);
+  let failed = gSender.getFailedComments(gTopic);
+  for (let chash of [...pending, ...failed])
+    updateCommentState(chash);
 }
 
 function markAllCommentsAsRead() {
@@ -135,15 +172,17 @@ async function handlePostCommentButtonClick() {
   let text = textarea.value.trim();
 
   try {
-    let { hash, body } = await postComment({ text });
+    if (!text) throw new Error('Cannot send an empty comment.');
+    let { hash, body } = await gSender.postComment({
+      text,
+      topic: gTopic,
+      parent: gTopic,
+    });
     textarea.value = '';
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
     $.comments.insertBefore(div, $.comments.firstChild);
     updateCommentsCount();
-    let tcache = gCache.getTopic(gTopic);
-    tcache.addComment(hash, body);
-    tcache.setCommentHashes([hash, ...tcache.getCommentHashes()]);
   } finally {
     buttonAdd.disabled = false;
   }
@@ -160,48 +199,6 @@ function renderHtmlAsElement(html) {
   return element;
 }
 
-async function postComment({ text, parent = gTopic, topicId = gTopic }) {
-  let status = $('#status');
-  status.textContent = 'Prepairing comment.';
-
-  try {
-    if (!text) throw new Error('Cannot post empty comments.');
-    let body = await makeCommentBody({ text, parent });
-    let hash = await sha1(body);
-    status.textContent = 'Posting comment.';
-    await gDataServer.postComment(topicId, { hash, body });
-    status.textContent = '';
-    gComments[hash] = body;
-    return { hash, body };
-  } catch (err) {
-    status.textContent = err && (err.stack || err.message || err);
-  }
-}
-
-async function postRandomComments({ size = 100, prefix = 'test-' } = {}) {
-  let hashes = [gTopic];
-
-  for (let i = 0; i < size; i++) {
-    let parent = hashes[Math.random() * hashes.length | 0];
-
-    let { hash } = await postComment({
-      text: prefix + i,
-      parent: parent,
-    });
-
-    hashes.push(hash);
-  }
-}
-
-async function makeCommentBody({ text, parent = gTopic }) {
-  return [
-    'Date: ' + new Date().toISOString(),
-    'Parent: ' + parent,
-    '',
-    text,
-  ].join('\n');
-}
-
 async function getComments(thash = gTopic) {
   let status = $('#status');
 
@@ -213,7 +210,13 @@ async function getComments(thash = gTopic) {
     let tcache = gCache.getTopic(thash);
     let xorhash = tcache.getXorHash();
     log('Cached xorhash:', xorhash);
-    let list = await gDataServer.fetchComments(thash, xorhash);
+    let list = [];
+
+    try {
+      list = await gDataServer.fetchComments(thash, xorhash);
+    } catch (err) {
+      log.e('Failed to get comments:', err);
+    }
 
     log('Hashing comments.');
     let htime = Date.now();
@@ -225,7 +228,7 @@ async function getComments(thash = gTopic) {
       gComments[chash] = cbody;
     }
 
-    let tasks = list.map(data => {      
+    let tasks = list.map(data => {
       return sha1(data).then(hash => {
         gComments[hash] = data;
         tcache.addComment(hash, data);
@@ -290,6 +293,10 @@ function parseCommentBody(body, hash) {
   return { date: new Date(date), parent, text, hash };
 }
 
+function findCommentDivByHash(chash) {
+  return $('#cm-' + chash);
+}
+
 function makeCommentHtml({ text, date, hash, subc = '' }) {
   return `
     <div class="cm" id="cm-${hash}">
@@ -300,21 +307,4 @@ function makeCommentHtml({ text, date, hash, subc = '' }) {
       <div class="ct">${text}</div>
       <div class="sub">${subc}</div>
     </div>`;
-}
-
-function sha1(str: string): Promise<string> {
-  let bytes = new Uint8Array(str.length);
-
-  for (let i = 0; i < str.length; i++)
-    bytes[i] = str.charCodeAt(i) & 0xFF;
-
-  return new Promise(resolve => {
-    crypto.subtle.digest('SHA-1', bytes).then(buffer => {
-      let hash = Array.from(new Uint8Array(buffer)).map(byte => {
-        return ('0' + byte.toString(16)).slice(-2);
-      }).join('');
-
-      resolve(hash);
-    });
-  });
 }

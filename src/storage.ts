@@ -17,8 +17,32 @@ export class LSEntry {
     if (value) {
       localStorage.setItem(this.key, value);
     } else {
-      localStorage.removeItem(this.key);
+      this.remove();
     }
+  }
+
+  remove() {
+    localStorage.removeItem(this.key);
+  }
+
+  get json() {
+    let text = this.text;
+    return text ? JSON.parse(text) : undefined;
+  }
+
+  set json(value) {
+    if (value === undefined)
+      this.remove();
+    else
+      this.text = JSON.stringify(value);
+  }
+
+  get text() {
+    return this.getValue();
+  }
+
+  set text(value) {
+    this.setValue(value);
   }
 }
 
