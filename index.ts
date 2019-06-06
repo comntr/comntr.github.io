@@ -44,7 +44,7 @@ export function init() {
 
   window.onhashchange = () => {
     if (gConfig.ext)
-      $.count.href = location.href;
+      $.count.href = location.origin + location.hash;
     resetComments();
     renderComments();
   };

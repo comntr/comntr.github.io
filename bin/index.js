@@ -31,7 +31,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         });
         window.onhashchange = () => {
             if (config_1.gConfig.ext)
-                $.count.href = location.href;
+                $.count.href = location.origin + location.hash;
             resetComments();
             renderComments();
         };
