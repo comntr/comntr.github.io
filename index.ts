@@ -24,11 +24,6 @@ $.count = null as HTMLElement;
 $.status = null as HTMLElement;
 
 export function init() {
-  window.onhashchange = () => {
-    resetComments();
-    renderComments();
-  };
-
   log('Query params:', gConfig);
 
   $.comments = $('#all-comments');
@@ -46,7 +41,13 @@ export function init() {
     if (e.thash == gTopic)
       updateCommentState(e.chash);
   });
-  renderComments();
+
+  window.onhashchange = () => {
+    resetComments();
+    renderComments();
+  };
+
+  window.onhashchange(null);
 }
 
 function updateCommentState(chash) {
@@ -84,22 +85,36 @@ function resetComments() {
   $.comments.innerHTML = '';
   $.count.innerHTML = '';
   gComments = null;
+  let placeholder = createNewCommentDiv({ id: 'comment' });
+  $.comments.appendChild(placeholder);
 }
 
 function isCollapseButton(x) {
   return x && x.className == 'c';
 }
 
+function isReplyButton(x) {
+  return x && x.className == 'r';
+}
+
+function isPostButton(x) {
+  return x && x.className == 'post';
+}
+
 function isCommentContainer(x) {
   return x && x.className == 'cm';
 }
 
+function findCommentContainer(target) {
+  let comm = target.parentElement;
+  while (comm && !isCommentContainer(comm))
+    comm = comm.parentElement;
+  return comm;
+}
+
 function handleCommentsClick(target) {
   if (isCollapseButton(target)) {
-    let comm = target;
-    while (comm && !isCommentContainer(comm))
-      comm = comm.parentElement;
-    log('(Un)collapsing', comm.id);
+    let comm = findCommentContainer(target);
     let subc = comm.querySelector('.sub');
     if (subc) {
       let disp = subc.style.display;
@@ -107,13 +122,29 @@ function handleCommentsClick(target) {
       target.textContent = !disp ? 'Uncollapse' : 'Collapse';
     }
   }
+
+  if (isReplyButton(target)) {
+    let comm = findCommentContainer(target);
+    let subc = comm.querySelector('.sub') as HTMLElement;
+
+    if (!subc) {
+      subc = renderHtmlAsElement(`<div class="sub"></div>`);
+      comm.appendChild(subc);
+    }
+
+    let repl = createNewCommentDiv({ id: '' })
+    subc.insertBefore(repl, subc.firstChild);
+  }
+
+  if (isPostButton(target)) {
+    handlePostCommentButtonClick(target);
+  }
 }
 
 async function renderComments() {
   let topicId = location.hash.slice(1);
   log('Rendering comments for topic:', topicId);
 
-  let buttonAdd = $('#post-comment');
   let topicEl = $('#topic');
 
   if (!topicId) {
@@ -139,13 +170,11 @@ async function renderComments() {
 
   if (!SHA1_PATTERN.test(topicId)) {
     gURL = topicId;
-    log('Getting SHA1 of the topic:', topicId);
     topicId = await sha1(topicId);
-    log('SHA1:', topicId);
+    log('sha1(topic):', topicId);
   }
 
   gTopic = topicId;
-  buttonAdd.onclick = () => handlePostCommentButtonClick();
   await getComments(topicId);
   markAllCommentsAsRead();
   updateAllCommentStates();
@@ -165,26 +194,33 @@ function markAllCommentsAsRead() {
   gWatchlist.setSize(gTopic, size);
 }
 
-async function handlePostCommentButtonClick() {
-  let buttonAdd = $('#post-comment') as HTMLButtonElement;
-  buttonAdd.disabled = true;
-  let textarea = $('#comment') as HTMLTextAreaElement;
-  let text = textarea.value.trim();
+async function handlePostCommentButtonClick(buttonAdd) {
+  let divComment = findCommentContainer(buttonAdd);
+  let divParent = findCommentContainer(divComment);
+  let divInput = divComment.querySelector('.ct');
+  let divSubc = divParent.querySelector('.sub');
+  let text = divInput.textContent.trim();
+  let phash = divParent ? divParent.id.slice(3) : gTopic;
+  log('Replying to', phash, 'with', text);
 
   try {
     if (!text) throw new Error('Cannot send an empty comment.');
+    buttonAdd.style.display = 'none';
+
     let { hash, body } = await gSender.postComment({
       text,
       topic: gTopic,
-      parent: gTopic,
+      parent: phash,
     });
-    textarea.value = '';
+
+    
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
-    $.comments.insertBefore(div, $.comments.firstChild);
+    divSubc.insertBefore(div, divSubc.firstChild);
+    divComment.remove();
     updateCommentsCount();
   } finally {
-    buttonAdd.disabled = false;
+    buttonAdd.style.display = '';
   }
 
   gWatchlist.add(gTopic, gURL);
@@ -196,7 +232,7 @@ function renderHtmlAsElement(html) {
   container.innerHTML = html;
   let element = container.children[0];
   container.innerHTML = '';
-  return element;
+  return element as HTMLElement;
 }
 
 async function getComments(thash = gTopic) {
@@ -276,7 +312,7 @@ async function getComments(thash = gTopic) {
       return htmls.join('\n');
     };
 
-    $.comments.innerHTML = render(gTopic);
+    $.comments.innerHTML += render(gTopic);
     rtime = Date.now() - rtime;
     log('Render time:', rtime, 'ms');
     status.textContent = '';
@@ -297,15 +333,31 @@ function findCommentDivByHash(chash) {
   return $('#cm-' + chash);
 }
 
-function makeCommentHtml({ text, date, hash, subc = '' }) {
+function createNewCommentDiv({ id }) {
+  let html = makeCommentHtml({ user: 'You' });
+  let div = renderHtmlAsElement(html);
+  div.id = id;
+  return div;
+}
+
+function makeCommentHtml({
+  user = null,
+  text = '', // empty text means it's editable
+  date = null,
+  hash = null,
+  subc = '' }) {
+
   return `
-    <div class="cm" id="cm-${hash}">
+    <div class="cm" ${hash ? `id="cm-${hash}"` : ``}>
       <div class="hd">
-        <span class="ts">${getRelativeTime(date)}</span>
-        <span class="c" style="${subc ? '' : 'display:none'}">Collapse</span>
+        ${user ? `<span class="u">${user}</span>` : ``}
+        ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
+        ${text ? `<span class="r">Reply</span>` : ``}
+        ${!text ? `<span class="post" title="Post comment.">Post</span>` : ``}
+        ${subc ? `<span class="c">Collapse</span>` : ``}
       </div>
-      <div class="ct">${text}</div>
-      <div class="sub">${subc}</div>
+      <div class="ct" ${!text ? `contenteditable` : ``}>${text}</div>
+      ${subc ? `<div class="sub">${subc}</div>` : ``}
     </div>`;
 }
 

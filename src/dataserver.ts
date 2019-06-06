@@ -11,7 +11,7 @@ class DataServer {
   async postComment(topicId, { hash, body }) {
     let host = gConfig.srv;
     let url = host + '/' + topicId + '/' + hash;
-    log(url, JSON.stringify(body));
+    log('POST ' + url + '\n' + body);
 
     if (gConfig.act > 0 && Math.random() < gConfig.act)
       throw new HttpError(567, 'Throttled with ?act=' + gConfig.act);

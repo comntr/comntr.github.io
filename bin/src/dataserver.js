@@ -13,7 +13,7 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
         async postComment(topicId, { hash, body }) {
             let host = config_1.gConfig.srv;
             let url = host + '/' + topicId + '/' + hash;
-            log_1.log(url, JSON.stringify(body));
+            log_1.log('POST ' + url + '\n' + body);
             if (config_1.gConfig.act > 0 && Math.random() < config_1.gConfig.act)
                 throw new HttpError(567, 'Throttled with ?act=' + config_1.gConfig.act);
             let rsp = await fetch(url, { method: 'POST', body });

@@ -21,39 +21,52 @@ body {
   margin: 10pt 0;
 }
 
-.ct {
+.cm > .ct {
   word-break: break-all;
 }
 
-.hd {
+.cm > .ct:empty:not(:focus) {
+  cursor: text;
+}
+
+.cm > .ct:empty:not(:focus)::before {
+  content: 'Your comment...';
+  color: #888;
+}
+
+.cm > .ct:focus {
+  outline: none;
+}
+
+.cm > .hd {
   color: #888;
   font-size: 0.7em;
   user-select: none;
 }
 
-.hd > * {
+.cm > .hd > * {
   margin-right: 5pt;
 }
 
-.hd > .st[state="failed"] {
+.cm > .hd > .st[state="failed"] {
   color: #f00;
   background: #ff0;
 }
 
-.hd > .st[state="sent"] {
+.cm > .hd > .st[state="sent"] {
   color: #0f0;
 }
 
-.u, .c {
+.cm > .hd > .r, .c, .post {
   text-decoration: underline;
   cursor: pointer;
 }
 
-.r {
-  text-decoration: underline;
-  cursor: pointer;
+.cm > .hd > .post {
+  font-weight: bold;
+  color: #000;
 }
 
-.sub {
+.cm > .sub {
   margin-left: 10pt;
 }
