@@ -20,7 +20,7 @@ const $ = (selector: string): HTMLElement => document.querySelector(selector);
 
 $.comments = null as HTMLElement;
 $.topic = null as HTMLElement;
-$.count = null as HTMLElement;
+$.count = null as HTMLAnchorElement;
 $.status = null as HTMLElement;
 
 export function init() {
@@ -29,7 +29,7 @@ export function init() {
   $.comments = $('#all-comments');
   $.status = $('#status');
   $.topic = $('#topic');
-  $.count = $('#comments-count');
+  $.count = $('#comments-count') as HTMLAnchorElement;
 
   if (gConfig.ext) {
     log('Launched as the extension popup.');
@@ -43,6 +43,8 @@ export function init() {
   });
 
   window.onhashchange = () => {
+    if (!gConfig.ext)
+      $.count.href = location.href;
     resetComments();
     renderComments();
   };
@@ -83,7 +85,7 @@ function updateCommentsCount() {
 function resetComments() {
   log('Resetting comments.');
   $.comments.innerHTML = '';
-  $.count.innerHTML = '';
+  $.count.textContent = '';
   gComments = null;
   let placeholder = createNewCommentDiv({ id: 'comment' });
   $.comments.appendChild(placeholder);

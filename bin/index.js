@@ -30,6 +30,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 updateCommentState(e.chash);
         });
         window.onhashchange = () => {
+            if (!config_1.gConfig.ext)
+                $.count.href = location.href;
             resetComments();
             renderComments();
         };
@@ -68,7 +70,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function resetComments() {
         log_1.log('Resetting comments.');
         $.comments.innerHTML = '';
-        $.count.innerHTML = '';
+        $.count.textContent = '';
         gComments = null;
         let placeholder = createNewCommentDiv({ id: 'comment' });
         $.comments.appendChild(placeholder);

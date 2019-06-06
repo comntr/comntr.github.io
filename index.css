@@ -17,6 +17,11 @@ body {
   width: 100%;
 }
 
+#comments-count {
+  display: block;
+  color: #000;
+}
+
 .cm {
   margin: 10pt 0;
 }
