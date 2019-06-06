@@ -43,7 +43,7 @@ export function init() {
   });
 
   window.onhashchange = () => {
-    if (!gConfig.ext)
+    if (gConfig.ext)
       $.count.href = location.href;
     resetComments();
     renderComments();

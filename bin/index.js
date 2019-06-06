@@ -30,7 +30,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 updateCommentState(e.chash);
         });
         window.onhashchange = () => {
-            if (!config_1.gConfig.ext)
+            if (config_1.gConfig.ext)
                 $.count.href = location.href;
             resetComments();
             renderComments();
