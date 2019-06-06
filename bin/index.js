@@ -261,12 +261,30 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return `
     <div class="cm" id="cm-${hash}">
       <div class="hd">
-        <span class="ts">${date.toLocaleTimeString()}</span>
+        <span class="ts">${getRelativeTime(date)}</span>
         <span class="c" style="${subc ? '' : 'display:none'}">Collapse</span>
       </div>
       <div class="ct">${text}</div>
       <div class="sub">${subc}</div>
     </div>`;
+    }
+    function getRelativeTime(time) {
+        const MINUTE = 60;
+        const HOUR = 3600;
+        const DAY = 86400;
+        const MONTH = 30 * DAY;
+        let diff = (Date.now() - time.getTime()) / 1000;
+        if (diff < 0)
+            return 'In the future';
+        if (diff < 60)
+            return 'A minute ago';
+        if (diff < HOUR)
+            return (diff / MINUTE | 0) + ' minutes ago';
+        if (diff < DAY)
+            return (diff / HOUR | 0) + ' hours ago';
+        if (diff < MONTH)
+            return (diff / DAY | 0) + ' days ago';
+        return time.toLocaleDateString();
     }
 });
 //# sourceMappingURL=index.js.map
