@@ -31,11 +31,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             if (e.thash == gTopic)
                 updateCommentState(e.chash);
         });
-        window.onhashchange = () => {
+        window.onhashchange = async () => {
             if (config_1.gConfig.ext)
                 $.count.href = location.origin + location.hash;
-            resetComments();
-            renderComments();
+            await resetComments();
+            await renderComments();
+            await loadDrafts();
         };
         window.onhashchange(null);
     }
@@ -74,7 +75,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         $.comments.innerHTML = '';
         $.count.textContent = '';
         gComments = null;
-        let placeholder = createNewCommentDiv({ id: 'comment' });
+        let placeholder = createNewCommentDiv();
         $.comments.appendChild(placeholder);
     }
     function isCollapseButton(x) {
@@ -87,7 +88,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return x && x.className == 'post';
     }
     function isCommentContainer(x) {
-        return x && x.className == 'cm';
+        return x && x.classList.contains('cm');
     }
     function isCommentTextArea(x) {
         return x && x.className == 'ct';
@@ -117,6 +118,13 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         gDrafts.json = drafts;
         log_1.log('Saving the draft has taken:', Date.now() - time, 'ms');
     }
+    function loadDrafts() {
+        let drafts = gDrafts.json || {};
+        for (let chash in drafts) {
+            let ctext = drafts[chash];
+            setCommentDraftFor(chash, ctext);
+        }
+    }
     function handleCommentsAreaClick(target) {
         handleCollapseButtonClick(target);
         handleReplyButtonClick(target);
@@ -137,13 +145,33 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!isReplyButton(target))
             return;
         let comm = findCommentContainer(target);
+        let chash = getCommentId(comm);
+        setCommentDraftFor(chash);
+    }
+    function setCommentDraftFor(chash, ctext = '') {
+        if (chash == gTopic) {
+            let divDraft = $.comments.querySelector(':scope > .draft');
+            let divText = divDraft && divDraft.querySelector('.ct');
+            if (divText)
+                divText.textContent = ctext;
+            return;
+        }
+        let comm = findCommentDivByHash(chash);
+        if (!comm)
+            return;
         let subc = comm.querySelector('.sub');
         if (!subc) {
             subc = renderHtmlAsElement(`<div class="sub"></div>`);
             comm.appendChild(subc);
         }
-        let repl = createNewCommentDiv({ id: '' });
-        subc.insertBefore(repl, subc.firstChild);
+        let repl = subc.querySelector(':scope > .draft');
+        if (!repl) {
+            repl = createNewCommentDiv();
+            subc.insertBefore(repl, subc.firstChild);
+        }
+        if (ctext) {
+            repl.querySelector('.ct').textContent = ctext;
+        }
     }
     async function renderComments() {
         let topicId = location.hash.slice(1);
@@ -197,7 +225,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let divComment = findCommentContainer(buttonAdd);
         let divParent = findCommentContainer(divComment);
         let divInput = divComment.querySelector('.ct');
-        let divSubc = divParent.querySelector('.sub');
+        let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
         let text = divInput.textContent.trim();
         let phash = divParent ? divParent.id.slice(3) : gTopic;
         log_1.log('Replying to', phash, 'with', text);
@@ -205,6 +233,9 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             if (!text)
                 throw new Error('Cannot send an empty comment.');
             buttonAdd.style.display = 'none';
+            let drafts = gDrafts.json || {};
+            delete drafts[phash];
+            gDrafts.json = drafts;
             let { hash, body } = await sender_1.gSender.postComment({
                 text,
                 topic: gTopic,
@@ -314,10 +345,10 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function findCommentDivByHash(chash) {
         return $('#cm-' + chash);
     }
-    function createNewCommentDiv({ id }) {
+    function createNewCommentDiv() {
         let html = makeCommentHtml({ user: 'You' });
         let div = renderHtmlAsElement(html);
-        div.id = id;
+        div.classList.add('draft');
         return div;
     }
     function makeCommentHtml({ user = null, text = '', // empty text means it's editable

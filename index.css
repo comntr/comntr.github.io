@@ -12,11 +12,6 @@ body {
   text-decoration: none;
 }
 
-#comment {
-  margin: 5pt 0;
-  width: 100%;
-}
-
 #comments-count {
   display: block;
   color: #000;
