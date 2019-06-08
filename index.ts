@@ -5,6 +5,7 @@ import { gCache } from 'src/cache';
 import { gDataServer } from 'src/dataserver';
 import { gSender } from 'src/sender';
 import { sha1 } from 'src/hashutil';
+import { gStorage } from 'src/storage';
 
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -15,6 +16,7 @@ const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 let gURL = null;
 let gTopic = null; // SHA1
 let gComments = null; // sha1 -> data
+let gDrafts = gStorage.getEntry('.drafts');
 
 const $ = (selector: string): HTMLElement => document.querySelector(selector);
 
@@ -36,7 +38,9 @@ export function init() {
     $.topic.style.display = 'none';
   }
 
-  $.comments.onclick = event => handleCommentsClick(event.target);
+  $.comments.onclick = event => handleCommentsAreaClick(event.target);
+  $.comments.oninput = event => handleCommentEdited(event.target);
+
   gSender.commentStateChanged.addListener(e => {
     if (e.thash == gTopic)
       updateCommentState(e.chash);
@@ -107,6 +111,14 @@ function isCommentContainer(x) {
   return x && x.className == 'cm';
 }
 
+function isCommentTextArea(x) {
+  return x && x.className == 'ct';
+}
+
+function getCommentId(x) {
+  return isCommentContainer(x) ? x.id.slice(3) : null;
+}
+
 function findCommentContainer(target) {
   let comm = target.parentElement;
   while (comm && !isCommentContainer(comm))
@@ -114,7 +126,22 @@ function findCommentContainer(target) {
   return comm;
 }
 
-function handleCommentsClick(target) {
+function handleCommentEdited(target) {
+  if (!isCommentTextArea(target)) return;
+  if (target.id) return;
+  let time = Date.now();
+  let divComment = findCommentContainer(target);
+  divComment = findCommentContainer(divComment);
+  let chash = divComment ? getCommentId(divComment) : gTopic;
+  let ctext = target.textContent.trim();
+  log('Saving draft for:', chash);
+  let drafts = gDrafts.json || {};
+  drafts[chash] = ctext;
+  gDrafts.json = drafts;
+  log('Saving the draft has taken:', Date.now() - time, 'ms');
+}
+
+function handleCommentsAreaClick(target) {
   handleCollapseButtonClick(target);
   handleReplyButtonClick(target);
   handlePostCommentButtonClick(target);

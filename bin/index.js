@@ -1,4 +1,4 @@
-define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1) {
+define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
@@ -9,6 +9,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     let gURL = null;
     let gTopic = null; // SHA1
     let gComments = null; // sha1 -> data
+    let gDrafts = storage_1.gStorage.getEntry('.drafts');
     const $ = (selector) => document.querySelector(selector);
     $.comments = null;
     $.topic = null;
@@ -24,7 +25,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             log_1.log('Launched as the extension popup.');
             $.topic.style.display = 'none';
         }
-        $.comments.onclick = event => handleCommentsClick(event.target);
+        $.comments.onclick = event => handleCommentsAreaClick(event.target);
+        $.comments.oninput = event => handleCommentEdited(event.target);
         sender_1.gSender.commentStateChanged.addListener(e => {
             if (e.thash == gTopic)
                 updateCommentState(e.chash);
@@ -87,13 +89,35 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function isCommentContainer(x) {
         return x && x.className == 'cm';
     }
+    function isCommentTextArea(x) {
+        return x && x.className == 'ct';
+    }
+    function getCommentId(x) {
+        return isCommentContainer(x) ? x.id.slice(3) : null;
+    }
     function findCommentContainer(target) {
         let comm = target.parentElement;
         while (comm && !isCommentContainer(comm))
             comm = comm.parentElement;
         return comm;
     }
-    function handleCommentsClick(target) {
+    function handleCommentEdited(target) {
+        if (!isCommentTextArea(target))
+            return;
+        if (target.id)
+            return;
+        let time = Date.now();
+        let divComment = findCommentContainer(target);
+        divComment = findCommentContainer(divComment);
+        let chash = divComment ? getCommentId(divComment) : gTopic;
+        let ctext = target.textContent.trim();
+        log_1.log('Saving draft for:', chash);
+        let drafts = gDrafts.json || {};
+        drafts[chash] = ctext;
+        gDrafts.json = drafts;
+        log_1.log('Saving the draft has taken:', Date.now() - time, 'ms');
+    }
+    function handleCommentsAreaClick(target) {
         handleCollapseButtonClick(target);
         handleReplyButtonClick(target);
         handlePostCommentButtonClick(target);
