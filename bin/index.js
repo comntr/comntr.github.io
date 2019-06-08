@@ -94,28 +94,32 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return comm;
     }
     function handleCommentsClick(target) {
-        if (isCollapseButton(target)) {
-            let comm = findCommentContainer(target);
-            let subc = comm.querySelector('.sub');
-            if (subc) {
-                let disp = subc.style.display;
-                subc.style.display = !disp ? 'none' : '';
-                target.textContent = !disp ? 'Uncollapse' : 'Collapse';
-            }
+        handleCollapseButtonClick(target);
+        handleReplyButtonClick(target);
+        handlePostCommentButtonClick(target);
+    }
+    function handleCollapseButtonClick(target) {
+        if (!isCollapseButton(target))
+            return;
+        let comm = findCommentContainer(target);
+        let subc = comm.querySelector('.sub');
+        if (subc) {
+            let disp = subc.style.display;
+            subc.style.display = !disp ? 'none' : '';
+            target.textContent = !disp ? 'Uncollapse' : 'Collapse';
         }
-        if (isReplyButton(target)) {
-            let comm = findCommentContainer(target);
-            let subc = comm.querySelector('.sub');
-            if (!subc) {
-                subc = renderHtmlAsElement(`<div class="sub"></div>`);
-                comm.appendChild(subc);
-            }
-            let repl = createNewCommentDiv({ id: '' });
-            subc.insertBefore(repl, subc.firstChild);
+    }
+    function handleReplyButtonClick(target) {
+        if (!isReplyButton(target))
+            return;
+        let comm = findCommentContainer(target);
+        let subc = comm.querySelector('.sub');
+        if (!subc) {
+            subc = renderHtmlAsElement(`<div class="sub"></div>`);
+            comm.appendChild(subc);
         }
-        if (isPostButton(target)) {
-            handlePostCommentButtonClick(target);
-        }
+        let repl = createNewCommentDiv({ id: '' });
+        subc.insertBefore(repl, subc.firstChild);
     }
     async function renderComments() {
         let topicId = location.hash.slice(1);
@@ -164,6 +168,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         watchlist_1.gWatchlist.setSize(gTopic, size);
     }
     async function handlePostCommentButtonClick(buttonAdd) {
+        if (!isPostButton(buttonAdd))
+            return;
         let divComment = findCommentContainer(buttonAdd);
         let divParent = findCommentContainer(divComment);
         let divInput = divComment.querySelector('.ct');

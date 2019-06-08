@@ -115,32 +115,34 @@ function findCommentContainer(target) {
 }
 
 function handleCommentsClick(target) {
-  if (isCollapseButton(target)) {
-    let comm = findCommentContainer(target);
-    let subc = comm.querySelector('.sub');
-    if (subc) {
-      let disp = subc.style.display;
-      subc.style.display = !disp ? 'none' : '';
-      target.textContent = !disp ? 'Uncollapse' : 'Collapse';
-    }
+  handleCollapseButtonClick(target);
+  handleReplyButtonClick(target);
+  handlePostCommentButtonClick(target);
+}
+
+function handleCollapseButtonClick(target) {
+  if (!isCollapseButton(target)) return;
+  let comm = findCommentContainer(target);
+  let subc = comm.querySelector('.sub');
+  if (subc) {
+    let disp = subc.style.display;
+    subc.style.display = !disp ? 'none' : '';
+    target.textContent = !disp ? 'Uncollapse' : 'Collapse';
+  }
+}
+
+function handleReplyButtonClick(target) {
+  if (!isReplyButton(target)) return;
+  let comm = findCommentContainer(target);
+  let subc = comm.querySelector('.sub') as HTMLElement;
+
+  if (!subc) {
+    subc = renderHtmlAsElement(`<div class="sub"></div>`);
+    comm.appendChild(subc);
   }
 
-  if (isReplyButton(target)) {
-    let comm = findCommentContainer(target);
-    let subc = comm.querySelector('.sub') as HTMLElement;
-
-    if (!subc) {
-      subc = renderHtmlAsElement(`<div class="sub"></div>`);
-      comm.appendChild(subc);
-    }
-
-    let repl = createNewCommentDiv({ id: '' })
-    subc.insertBefore(repl, subc.firstChild);
-  }
-
-  if (isPostButton(target)) {
-    handlePostCommentButtonClick(target);
-  }
+  let repl = createNewCommentDiv({ id: '' })
+  subc.insertBefore(repl, subc.firstChild);
 }
 
 async function renderComments() {
@@ -197,6 +199,7 @@ function markAllCommentsAsRead() {
 }
 
 async function handlePostCommentButtonClick(buttonAdd) {
+  if (!isPostButton(buttonAdd)) return;
   let divComment = findCommentContainer(buttonAdd);
   let divParent = findCommentContainer(divComment);
   let divInput = divComment.querySelector('.ct');
@@ -215,7 +218,7 @@ async function handlePostCommentButtonClick(buttonAdd) {
       parent: phash,
     });
 
-    
+
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
     divSubc.insertBefore(div, divSubc.firstChild);

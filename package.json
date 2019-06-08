@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "start": "npm run compile; npm run server",
+    "start": "npm run build; npm run server",
     "clean": "rm -rf ./bin",
-    "compile": "npm i; npm run clean; node_modules/.bin/tsc",
+    "build": "npm i; npm run clean; node_modules/.bin/tsc",
     "server": "killall -q webfsd; webfsd -F -p 80 -r . -f index.html"
   },
   "devDependencies": {
