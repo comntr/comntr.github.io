@@ -1,4 +1,4 @@
-define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1) {
+define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
@@ -9,6 +9,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     let gURL = null;
     let gTopic = null; // SHA1
     let gComments = null; // sha1 -> data
+    let gDrafts = storage_1.gStorage.getEntry('.drafts');
+    let gDraftsTimer = 0;
     const $ = (selector) => document.querySelector(selector);
     $.comments = null;
     $.topic = null;
@@ -24,16 +26,18 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             log_1.log('Launched as the extension popup.');
             $.topic.style.display = 'none';
         }
-        $.comments.onclick = event => handleCommentsClick(event.target);
+        $.comments.onclick = event => handleCommentsAreaClick(event.target);
+        $.comments.oninput = event => handleCommentEdited(event.target);
         sender_1.gSender.commentStateChanged.addListener(e => {
             if (e.thash == gTopic)
                 updateCommentState(e.chash);
         });
-        window.onhashchange = () => {
+        window.onhashchange = async () => {
             if (config_1.gConfig.ext)
                 $.count.href = location.origin + location.hash;
-            resetComments();
-            renderComments();
+            await resetComments();
+            await renderComments();
+            await loadDrafts();
         };
         window.onhashchange(null);
     }
@@ -72,7 +76,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         $.comments.innerHTML = '';
         $.count.textContent = '';
         gComments = null;
-        let placeholder = createNewCommentDiv({ id: 'comment' });
+        let placeholder = createNewCommentDiv();
         $.comments.appendChild(placeholder);
     }
     function isCollapseButton(x) {
@@ -85,7 +89,13 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return x && x.className == 'post';
     }
     function isCommentContainer(x) {
-        return x && x.className == 'cm';
+        return x && x.classList.contains('cm');
+    }
+    function isCommentTextArea(x) {
+        return x && x.className == 'ct';
+    }
+    function getCommentId(x) {
+        return isCommentContainer(x) ? x.id.slice(3) : null;
     }
     function findCommentContainer(target) {
         let comm = target.parentElement;
@@ -93,28 +103,95 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             comm = comm.parentElement;
         return comm;
     }
-    function handleCommentsClick(target) {
-        if (isCollapseButton(target)) {
-            let comm = findCommentContainer(target);
-            let subc = comm.querySelector('.sub');
-            if (subc) {
-                let disp = subc.style.display;
-                subc.style.display = !disp ? 'none' : '';
-                target.textContent = !disp ? 'Uncollapse' : 'Collapse';
+    function handleCommentEdited(target) {
+        if (!isCommentTextArea(target))
+            return;
+        if (target.id)
+            return;
+        clearTimeout(gDraftsTimer);
+        gDraftsTimer = setTimeout(() => {
+            gDraftsTimer = 0;
+            saveDrafts();
+        }, config_1.gConfig.dut * 1000);
+    }
+    function saveDrafts() {
+        let time = Date.now();
+        let divs = $.comments.querySelectorAll('.cm.draft');
+        if (!divs.length)
+            return;
+        let drafts = gDrafts.json || {};
+        let updates = 0;
+        divs.forEach(cmDraft => {
+            let cmParent = findCommentContainer(cmDraft);
+            let chash = cmParent ? getCommentId(cmParent) : gTopic;
+            let ctext = cmDraft.querySelector('.ct').textContent.trim();
+            if (ctext && drafts[chash] != ctext) {
+                drafts[chash] = ctext;
+                updates++;
             }
+            else if (!ctext && drafts[chash]) {
+                delete drafts[chash];
+                updates++;
+            }
+        });
+        if (updates > 0) {
+            gDrafts.json = drafts;
+            log_1.log(`${updates} drafts updated in ${Date.now() - time} ms`);
         }
-        if (isReplyButton(target)) {
-            let comm = findCommentContainer(target);
-            let subc = comm.querySelector('.sub');
-            if (!subc) {
-                subc = renderHtmlAsElement(`<div class="sub"></div>`);
-                comm.appendChild(subc);
-            }
-            let repl = createNewCommentDiv({ id: '' });
+    }
+    function loadDrafts() {
+        let drafts = gDrafts.json || {};
+        for (let chash in drafts) {
+            let ctext = drafts[chash];
+            setCommentDraftFor(chash, ctext);
+        }
+    }
+    function handleCommentsAreaClick(target) {
+        handleCollapseButtonClick(target);
+        handleReplyButtonClick(target);
+        handlePostCommentButtonClick(target);
+    }
+    function handleCollapseButtonClick(target) {
+        if (!isCollapseButton(target))
+            return;
+        let comm = findCommentContainer(target);
+        let subc = comm.querySelector('.sub');
+        if (subc) {
+            let disp = subc.style.display;
+            subc.style.display = !disp ? 'none' : '';
+            target.textContent = !disp ? 'Uncollapse' : 'Collapse';
+        }
+    }
+    function handleReplyButtonClick(target) {
+        if (!isReplyButton(target))
+            return;
+        let comm = findCommentContainer(target);
+        let chash = getCommentId(comm);
+        setCommentDraftFor(chash);
+    }
+    function setCommentDraftFor(chash, ctext = '') {
+        if (chash == gTopic) {
+            let divDraft = $.comments.querySelector(':scope > .draft');
+            let divText = divDraft && divDraft.querySelector('.ct');
+            if (divText)
+                divText.textContent = ctext;
+            return;
+        }
+        let comm = findCommentDivByHash(chash);
+        if (!comm)
+            return;
+        let subc = comm.querySelector('.sub');
+        if (!subc) {
+            subc = renderHtmlAsElement(`<div class="sub"></div>`);
+            comm.appendChild(subc);
+        }
+        let repl = subc.querySelector(':scope > .draft');
+        if (!repl) {
+            repl = createNewCommentDiv();
             subc.insertBefore(repl, subc.firstChild);
         }
-        if (isPostButton(target)) {
-            handlePostCommentButtonClick(target);
+        if (ctext) {
+            repl.querySelector('.ct').textContent = ctext;
         }
     }
     async function renderComments() {
@@ -164,10 +241,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         watchlist_1.gWatchlist.setSize(gTopic, size);
     }
     async function handlePostCommentButtonClick(buttonAdd) {
+        if (!isPostButton(buttonAdd))
+            return;
         let divComment = findCommentContainer(buttonAdd);
         let divParent = findCommentContainer(divComment);
         let divInput = divComment.querySelector('.ct');
-        let divSubc = divParent.querySelector('.sub');
+        let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
         let text = divInput.textContent.trim();
         let phash = divParent ? divParent.id.slice(3) : gTopic;
         log_1.log('Replying to', phash, 'with', text);
@@ -175,6 +254,9 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             if (!text)
                 throw new Error('Cannot send an empty comment.');
             buttonAdd.style.display = 'none';
+            let drafts = gDrafts.json || {};
+            delete drafts[phash];
+            gDrafts.json = drafts;
             let { hash, body } = await sender_1.gSender.postComment({
                 text,
                 topic: gTopic,
@@ -284,10 +366,10 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function findCommentDivByHash(chash) {
         return $('#cm-' + chash);
     }
-    function createNewCommentDiv({ id }) {
-        let html = makeCommentHtml({ user: 'You' });
+    function createNewCommentDiv() {
+        let html = makeCommentHtml({});
         let div = renderHtmlAsElement(html);
-        div.id = id;
+        div.classList.add('draft');
         return div;
     }
     function makeCommentHtml({ user = null, text = '', // empty text means it's editable
@@ -298,7 +380,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
         ${text ? `<span class="r">Reply</span>` : ``}
-        ${!text ? `<span class="post" title="Post comment.">Post</span>` : ``}
+        ${!text ? `<span class="post">Send comment</span>` : ``}
         ${subc ? `<span class="c">Collapse</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${text}</div>

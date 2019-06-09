@@ -12,11 +12,6 @@ body {
   text-decoration: none;
 }
 
-#comment {
-  margin: 5pt 0;
-  width: 100%;
-}
-
 #comments-count {
   display: block;
   color: #000;
@@ -41,6 +36,10 @@ body {
 
 .cm > .ct:focus {
   outline: none;
+}
+
+.cm.draft > .ct {
+  color: #444;
 }
 
 .cm > .hd {
@@ -68,8 +67,8 @@ body {
 }
 
 .cm > .hd > .post {
-  font-weight: bold;
-  color: #000;
+  color: #fff;
+  background: #00f;
 }
 
 .cm > .sub {
