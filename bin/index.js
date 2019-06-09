@@ -10,6 +10,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     let gTopic = null; // SHA1
     let gComments = null; // sha1 -> data
     let gDrafts = storage_1.gStorage.getEntry('.drafts');
+    let gDraftsTimer = 0;
     const $ = (selector) => document.querySelector(selector);
     $.comments = null;
     $.topic = null;
@@ -107,16 +108,36 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             return;
         if (target.id)
             return;
+        clearTimeout(gDraftsTimer);
+        gDraftsTimer = setTimeout(() => {
+            gDraftsTimer = 0;
+            saveDrafts();
+        }, config_1.gConfig.dut * 1000);
+    }
+    function saveDrafts() {
         let time = Date.now();
-        let divComment = findCommentContainer(target);
-        divComment = findCommentContainer(divComment);
-        let chash = divComment ? getCommentId(divComment) : gTopic;
-        let ctext = target.textContent.trim();
-        log_1.log('Saving draft for:', chash);
+        let divs = $.comments.querySelectorAll('.cm.draft');
+        if (!divs.length)
+            return;
         let drafts = gDrafts.json || {};
-        drafts[chash] = ctext;
-        gDrafts.json = drafts;
-        log_1.log('Saving the draft has taken:', Date.now() - time, 'ms');
+        let updates = 0;
+        divs.forEach(cmDraft => {
+            let cmParent = findCommentContainer(cmDraft);
+            let chash = cmParent ? getCommentId(cmParent) : gTopic;
+            let ctext = cmDraft.querySelector('.ct').textContent.trim();
+            if (ctext && drafts[chash] != ctext) {
+                drafts[chash] = ctext;
+                updates++;
+            }
+            else if (!ctext && drafts[chash]) {
+                delete drafts[chash];
+                updates++;
+            }
+        });
+        if (updates > 0) {
+            gDrafts.json = drafts;
+            log_1.log(`${updates} drafts updated in ${Date.now() - time} ms`);
+        }
     }
     function loadDrafts() {
         let drafts = gDrafts.json || {};
