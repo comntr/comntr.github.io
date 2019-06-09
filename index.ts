@@ -424,7 +424,7 @@ function findCommentDivByHash(chash) {
 }
 
 function createNewCommentDiv() {
-  let html = makeCommentHtml({ user: 'You' });
+  let html = makeCommentHtml({});
   let div = renderHtmlAsElement(html);
   div.classList.add('draft');
   return div;
@@ -443,7 +443,7 @@ function makeCommentHtml({
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
         ${text ? `<span class="r">Reply</span>` : ``}
-        ${!text ? `<span class="post" title="Post comment.">Post</span>` : ``}
+        ${!text ? `<span class="post">Send comment</span>` : ``}
         ${subc ? `<span class="c">Collapse</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${text}</div>
