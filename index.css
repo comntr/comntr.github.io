@@ -38,6 +38,10 @@ body {
   outline: none;
 }
 
+.cm.draft > .ct {
+  color: #444;
+}
+
 .cm > .hd {
   color: #888;
   font-size: 0.7em;
