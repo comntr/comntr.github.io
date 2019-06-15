@@ -6,6 +6,7 @@ import { log } from 'src/log';
 import { PeriodicTask } from 'src/ptask';
 import { gStorage } from 'src/storage';
 import { gConfig } from './config';
+import { gUser } from './user';
 
 const LSKEY_PENDING = '.staging.pending';
 const LSKEY_FAILED = '.staging.failed';
@@ -63,6 +64,7 @@ class CommentSender {
   async postComment({ text, parent, topic }: PostCommentArgs) {
     log('Posting comment to', topic);
     let body = await this.makeCommentBody({ text, parent });
+    body = await gUser.signComment(body);
     let hash = await sha1(body);
     gComments[hash] = body;
     this.cacheComment(topic, hash, body);

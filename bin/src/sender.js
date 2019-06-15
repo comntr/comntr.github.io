@@ -1,4 +1,4 @@
-define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/hashutil", "src/log", "src/ptask", "src/storage", "./config"], function (require, exports, event_1, cache_1, dataserver_1, hashutil_1, log_1, ptask_1, storage_1, config_1) {
+define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/hashutil", "src/log", "src/ptask", "src/storage", "./config", "./user"], function (require, exports, event_1, cache_1, dataserver_1, hashutil_1, log_1, ptask_1, storage_1, config_1, user_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const LSKEY_PENDING = '.staging.pending';
@@ -22,6 +22,7 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
         async postComment({ text, parent, topic }) {
             log_1.log('Posting comment to', topic);
             let body = await this.makeCommentBody({ text, parent });
+            body = await user_1.gUser.signComment(body);
             let hash = await hashutil_1.sha1(body);
             cache_1.gComments[hash] = body;
             this.cacheComment(topic, hash, body);
