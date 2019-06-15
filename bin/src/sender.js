@@ -22,7 +22,6 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
         async postComment({ text, parent, topic }) {
             log_1.log('Posting comment to', topic);
             let body = await this.makeCommentBody({ text, parent });
-            body = await user_1.gUser.signComment(body);
             let hash = await hashutil_1.sha1(body);
             cache_1.gComments[hash] = body;
             this.cacheComment(topic, hash, body);
@@ -112,12 +111,26 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             }
         }
         async makeCommentBody({ text, parent }) {
-            return [
+            let body = [
                 'Date: ' + new Date().toISOString(),
                 'Parent: ' + parent,
                 '',
                 text,
             ].join('\n');
+            try {
+                log_1.log.i('Signing the comment.');
+                body = await user_1.gUser.signComment(body);
+                log_1.log.i('Verifying the signature.');
+                let valid = await user_1.gUser.verifyComment(body);
+                if (valid)
+                    log_1.log.i('Signature is ok.');
+                else
+                    log_1.log.w('Signature is not ok.');
+            }
+            catch (err) {
+                log_1.log.w('Failed to sign the comment:', err);
+            }
+            return body;
         }
     }
     exports.gSender = new CommentSender;

@@ -64,7 +64,6 @@ class CommentSender {
   async postComment({ text, parent, topic }: PostCommentArgs) {
     log('Posting comment to', topic);
     let body = await this.makeCommentBody({ text, parent });
-    body = await gUser.signComment(body);
     let hash = await sha1(body);
     gComments[hash] = body;
     this.cacheComment(topic, hash, body);
@@ -170,12 +169,27 @@ class CommentSender {
   }
 
   private async makeCommentBody({ text, parent }) {
-    return [
+    let body = [
       'Date: ' + new Date().toISOString(),
       'Parent: ' + parent,
       '',
       text,
     ].join('\n');
+
+    try {
+      log.i('Signing the comment.');
+      body = await gUser.signComment(body);
+      log.i('Verifying the signature.');
+      let valid = await gUser.verifyComment(body);
+      if (valid)
+        log.i('Signature is ok.');
+      else
+        log.w('Signature is not ok.');
+    } catch (err) {
+      log.w('Failed to sign the comment:', err);
+    }
+
+    return body;
   }
 }
 

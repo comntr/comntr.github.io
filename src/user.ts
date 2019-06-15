@@ -1,8 +1,11 @@
 import { gStorage } from 'src/storage';
-import { hs2a, a2hs } from './hashutil';
+import { hs2a, a2hs } from 'src/hashutil';
+import { log } from 'src/log';
 
 const SIG_HEADER = 'Signature';
-const USER_HEADER = 'User';
+const PUBKEY_HEADER = 'Public-Key';
+const SC_POLL_INTERVAL = 0.5; // seconds
+const SC_WASM_TIMEOUT = 3; // seconds
 
 interface Supercop {
   ready(callback: Function): void;
@@ -13,33 +16,46 @@ interface Supercop {
 }
 
 interface UserKeys {
-  publicKey: Uint8Array;
-  secretKey: Uint8Array;
+  publicKey: Uint8Array; // 32 bytes
+  secretKey: Uint8Array; // 64 bytes
 }
 
 const gUserKeysLS = gStorage.getEntry('user.keys');
 
-let gSupercop: Supercop;
+let gSupercop: Supercop; // Ed25519
 let gUserKeys: UserKeys;
 
 async function getSupercop(): Promise<Supercop> {
   if (gSupercop) return gSupercop;
 
-  gSupercop = await new Promise((resolve, reject) => {
-    requirejs(['./supercop/index'], resolve, reject);
-  });
-
-  await new Promise(resolve => {
-    let timer = setInterval(() => {
-      try {
-        gSupercop.createSeed();
-        clearInterval(timer);
-        resolve();
-      } catch (err) {
-        
-      }
-    }, 1000);
-  });
+  log.i('Loading supercop.wasm.');
+  try {
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error('Timed out.'));
+        }, SC_WASM_TIMEOUT * 1000);
+      }),
+      new Promise((resolve, reject) => {
+        requirejs(['./supercop/index'], sc => {
+          log.i('Waiting for supercop.wasm to initialize.');
+          gSupercop = sc;
+          let timer = setInterval(() => {
+            try {
+              gSupercop.createSeed();
+              clearInterval(timer);
+              resolve();
+            } catch (err) {
+              // wasm not ready
+            }
+          }, SC_POLL_INTERVAL * 1000);
+        }, reject);
+      }),
+    ]);
+  } catch (err) {
+    log.e('Failed to load supercop.wasm:', err);
+    throw err;
+  }
 
   return gSupercop;
 }
@@ -56,6 +72,7 @@ async function getUserKeys() {
   }
 
   let supercop = await getSupercop();
+  log.i('Generating ed25519 keys.');
   let seed = supercop.createSeed();
   gUserKeys = supercop.createKeyPair(seed);
   gUserKeysLS.json = {
@@ -73,7 +90,7 @@ function getTextBytes(text: string): Uint8Array {
  * The signed comment gets two extra headers at the top:
  * 
  *    Signature: <signature>\n
- *    User: <public key>\n
+ *    Public-Key: <public key>\n
  *    ...
  * 
  * The signature signs everything below the Signature header.
@@ -81,16 +98,15 @@ function getTextBytes(text: string): Uint8Array {
 async function signComment(comment: string) {
   let supercop = await getSupercop();
   let keys = await getUserKeys();
-  comment =  USER_HEADER + ': ' + a2hs(keys.publicKey) + '\n' + comment;
+  comment = PUBKEY_HEADER + ': ' + a2hs(keys.publicKey) + '\n' + comment;
   let buffer = getTextBytes(comment);
   let signature = supercop.sign(buffer, keys.publicKey, keys.secretKey);
   comment = SIG_HEADER + ': ' + a2hs(signature) + '\n' + comment;
-  // await verifyComment(comment);
   return comment;
 }
 
 async function verifyComment(comment: string) {
-  let regex = new RegExp(`^${SIG_HEADER}: (\\w+)\\n${USER_HEADER}: (\\w+)\\n`);
+  let regex = new RegExp(`^${SIG_HEADER}: (\\w+)\\n${PUBKEY_HEADER}: (\\w+)\\n`);
   let match = regex.exec(comment);
   if (!match) return false;
   let signature = hs2a(match[1]);

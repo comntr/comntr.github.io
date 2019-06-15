@@ -1,28 +1,46 @@
-define(["require", "exports", "src/storage", "./hashutil"], function (require, exports, storage_1, hashutil_1) {
+define(["require", "exports", "src/storage", "src/hashutil", "src/log"], function (require, exports, storage_1, hashutil_1, log_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const SIG_HEADER = 'Signature';
-    const USER_HEADER = 'User';
+    const PUBKEY_HEADER = 'Public-Key';
+    const SC_POLL_INTERVAL = 0.5; // seconds
+    const SC_WASM_TIMEOUT = 3; // seconds
     const gUserKeysLS = storage_1.gStorage.getEntry('user.keys');
-    let gSupercop;
+    let gSupercop; // Ed25519
     let gUserKeys;
     async function getSupercop() {
         if (gSupercop)
             return gSupercop;
-        gSupercop = await new Promise((resolve, reject) => {
-            requirejs(['./supercop/index'], resolve, reject);
-        });
-        await new Promise(resolve => {
-            let timer = setInterval(() => {
-                try {
-                    gSupercop.createSeed();
-                    clearInterval(timer);
-                    resolve();
-                }
-                catch (err) {
-                }
-            }, 1000);
-        });
+        log_1.log.i('Loading supercop.wasm.');
+        try {
+            await Promise.race([
+                new Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        reject(new Error('Timed out.'));
+                    }, SC_WASM_TIMEOUT * 1000);
+                }),
+                new Promise((resolve, reject) => {
+                    requirejs(['./supercop/index'], sc => {
+                        log_1.log.i('Waiting for supercop.wasm to initialize.');
+                        gSupercop = sc;
+                        let timer = setInterval(() => {
+                            try {
+                                gSupercop.createSeed();
+                                clearInterval(timer);
+                                resolve();
+                            }
+                            catch (err) {
+                                // wasm not ready
+                            }
+                        }, SC_POLL_INTERVAL * 1000);
+                    }, reject);
+                }),
+            ]);
+        }
+        catch (err) {
+            log_1.log.e('Failed to load supercop.wasm:', err);
+            throw err;
+        }
         return gSupercop;
     }
     async function getUserKeys() {
@@ -36,6 +54,7 @@ define(["require", "exports", "src/storage", "./hashutil"], function (require, e
             };
         }
         let supercop = await getSupercop();
+        log_1.log.i('Generating ed25519 keys.');
         let seed = supercop.createSeed();
         gUserKeys = supercop.createKeyPair(seed);
         gUserKeysLS.json = {
@@ -51,7 +70,7 @@ define(["require", "exports", "src/storage", "./hashutil"], function (require, e
      * The signed comment gets two extra headers at the top:
      *
      *    Signature: <signature>\n
-     *    User: <public key>\n
+     *    Public-Key: <public key>\n
      *    ...
      *
      * The signature signs everything below the Signature header.
@@ -59,15 +78,14 @@ define(["require", "exports", "src/storage", "./hashutil"], function (require, e
     async function signComment(comment) {
         let supercop = await getSupercop();
         let keys = await getUserKeys();
-        comment = USER_HEADER + ': ' + hashutil_1.a2hs(keys.publicKey) + '\n' + comment;
+        comment = PUBKEY_HEADER + ': ' + hashutil_1.a2hs(keys.publicKey) + '\n' + comment;
         let buffer = getTextBytes(comment);
         let signature = supercop.sign(buffer, keys.publicKey, keys.secretKey);
         comment = SIG_HEADER + ': ' + hashutil_1.a2hs(signature) + '\n' + comment;
-        await verifyComment(comment);
         return comment;
     }
     async function verifyComment(comment) {
-        let regex = new RegExp(`^${SIG_HEADER}: (\\w+)\\n${USER_HEADER}: (\\w+)\\n`);
+        let regex = new RegExp(`^${SIG_HEADER}: (\\w+)\\n${PUBKEY_HEADER}: (\\w+)\\n`);
         let match = regex.exec(comment);
         if (!match)
             return false;

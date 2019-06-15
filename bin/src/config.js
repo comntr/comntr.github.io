@@ -29,6 +29,7 @@ define(["require", "exports"], function (require, exports) {
         srv: 'https://comntr.live:42751',
         cri: 600,
         dut: 1,
+        sign: true,
     });
 });
 //# sourceMappingURL=config.js.map
