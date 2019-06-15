@@ -25,4 +25,5 @@ export const gConfig = getQueryParams({
   srv: 'https://comntr.live:42751',
   cri: 600, // interval in seconds between resending comments
   dut: 1, // drafts update timeout in seconds
+  sign: true, // signs all comments before sending
 });

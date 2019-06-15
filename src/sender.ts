@@ -6,6 +6,7 @@ import { log } from 'src/log';
 import { PeriodicTask } from 'src/ptask';
 import { gStorage } from 'src/storage';
 import { gConfig } from './config';
+import { gUser } from './user';
 
 const LSKEY_PENDING = '.staging.pending';
 const LSKEY_FAILED = '.staging.failed';
@@ -168,12 +169,27 @@ class CommentSender {
   }
 
   private async makeCommentBody({ text, parent }) {
-    return [
+    let body = [
       'Date: ' + new Date().toISOString(),
       'Parent: ' + parent,
       '',
       text,
     ].join('\n');
+
+    try {
+      log.i('Signing the comment.');
+      body = await gUser.signComment(body);
+      log.i('Verifying the signature.');
+      let valid = await gUser.verifyComment(body);
+      if (valid)
+        log.i('Signature is ok.');
+      else
+        log.w('Signature is not ok.');
+    } catch (err) {
+      log.w('Failed to sign the comment:', err);
+    }
+
+    return body;
   }
 }
 
