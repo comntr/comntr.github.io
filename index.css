@@ -4,17 +4,20 @@ body {
   margin: 8pt;
 }
 
+#pii-notice {
+  background: #ff0;
+  border: 2px solid #f80;
+  font-weight: bold;
+  padding: 1em;
+  margin: 1em;
+}
+
 #topic {
   word-break: break-all;
 }
 
 #topic-hash > a {
   text-decoration: none;
-}
-
-#comments-count {
-  display: block;
-  color: #000;
 }
 
 .cm {
