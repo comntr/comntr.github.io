@@ -1,11 +1,16 @@
 {
   "scripts": {
-    "start": "npm run compile; npm run server",
+    "start": "npm run build; npm run server",
     "clean": "rm -rf ./bin",
-    "compile": "npm i; npm run clean; node_modules/.bin/tsc",
-    "server": "killall -q webfsd; webfsd -F -p 80 -r . -f index.html"
+    "build": "npm i; npm run clean; node_modules/.bin/tsc; npm run cplibs",
+    "cplibs": "rsync -a node_modules/supercop.wasm/src/* bin/supercop",
+    "server": "killall -q webfsd; webfsd -F -l - -p 80 -r . -f index.html"
   },
   "devDependencies": {
-    "typescript": "3.5.1"
+    "typescript": "3.5.1",
+    "@types/requirejs": "2.1.31"
+  },
+  "dependencies": {
+    "supercop.wasm": "5.0.1"
   }
 }

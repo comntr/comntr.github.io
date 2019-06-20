@@ -24,4 +24,6 @@ export const gConfig = getQueryParams({
   act: 0.0, // add-comment throttling: 0.99 would throttle 99% of attempts
   srv: 'https://comntr.live:42751',
   cri: 600, // interval in seconds between resending comments
+  dut: 1, // drafts update timeout in seconds
+  sign: true, // signs all comments before sending
 });

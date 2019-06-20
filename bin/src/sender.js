@@ -1,4 +1,4 @@
-define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/hashutil", "src/log", "src/ptask", "src/storage", "./config"], function (require, exports, event_1, cache_1, dataserver_1, hashutil_1, log_1, ptask_1, storage_1, config_1) {
+define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/hashutil", "src/log", "src/ptask", "src/storage", "./config", "./user"], function (require, exports, event_1, cache_1, dataserver_1, hashutil_1, log_1, ptask_1, storage_1, config_1, user_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const LSKEY_PENDING = '.staging.pending';
@@ -111,12 +111,26 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             }
         }
         async makeCommentBody({ text, parent }) {
-            return [
+            let body = [
                 'Date: ' + new Date().toISOString(),
                 'Parent: ' + parent,
                 '',
                 text,
             ].join('\n');
+            try {
+                log_1.log.i('Signing the comment.');
+                body = await user_1.gUser.signComment(body);
+                log_1.log.i('Verifying the signature.');
+                let valid = await user_1.gUser.verifyComment(body);
+                if (valid)
+                    log_1.log.i('Signature is ok.');
+                else
+                    log_1.log.w('Signature is not ok.');
+            }
+            catch (err) {
+                log_1.log.w('Failed to sign the comment:', err);
+            }
+            return body;
         }
     }
     exports.gSender = new CommentSender;
