@@ -380,7 +380,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
         ${text ? `<span class="r">Reply</span>` : ``}
-        ${!text ? `<span class="post">Send comment</span>` : ``}
+        ${!text ? `<span class="post">Send</span>` : ``}
         ${subc ? `<span class="c">Collapse</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${text}</div>

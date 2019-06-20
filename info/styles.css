@@ -1,4 +1,10 @@
 body {
-  font-size: 14pt;
+  font-size: 12pt;
   margin: 1em;
+}
+
+@media (orientation: portrait) {
+  body {
+    font-size: 36pt;
+  }
 }

@@ -1,7 +1,13 @@
 body {
   font-family: Ubuntu, Arial, sans-serif;
   font-size: 10pt;
-  margin: 8pt;
+  margin: 0.5em;
+}
+
+@media (orientation: portrait) {
+  body {
+    font-size: 36pt;
+  }
 }
 
 #pii-notice {
@@ -21,7 +27,7 @@ body {
 }
 
 .cm {
-  margin: 10pt 0;
+  margin: 1em 0;
 }
 
 .cm > .ct {
@@ -70,8 +76,9 @@ body {
 }
 
 .cm > .hd > .post {
-  color: #fff;
-  background: #00f;
+  color: #000;
+  background: #ff0;
+  font-weight: bold;
 }
 
 .cm > .sub {
