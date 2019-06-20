@@ -4,7 +4,7 @@
     "clean": "rm -rf ./bin",
     "build": "npm i; npm run clean; node_modules/.bin/tsc; npm run cplibs",
     "cplibs": "rsync -a node_modules/supercop.wasm/src/* bin/supercop",
-    "server": "killall -q webfsd; webfsd -F -l - -p 80 -r . -f index.html"
+    "server": "killall -q webfsd; sudo webfsd -F -l - -p 80 -r . -f index.html"
   },
   "devDependencies": {
     "typescript": "3.5.1",
