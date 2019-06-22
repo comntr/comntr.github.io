@@ -30,7 +30,8 @@ define(["require", "exports", "./hashutil", "./log", "./storage"], function (req
                     log_1.log('Uncaching topic:', h);
                     let t = this.topics[h];
                     this.topics.delete(h);
-                    t.remove();
+                    if (t)
+                        t.remove();
                 }
             }
             let list = this.thashes.join(LRU_CACHE_TOPICS_SEP);

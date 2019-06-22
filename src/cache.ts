@@ -40,7 +40,7 @@ class LRUCache {
         log('Uncaching topic:', h);
         let t = this.topics[h];
         this.topics.delete(h);
-        t.remove();
+        if (t) t.remove();
       }
     }
 
