@@ -197,7 +197,9 @@ function handleReplyButtonClick(target) {
   if (!isReplyButton(target)) return;
   let comm = findCommentContainer(target);
   let chash = getCommentId(comm);
-  setCommentDraftFor(chash);
+  let draft = setCommentDraftFor(chash);
+  let ct: HTMLElement = draft.querySelector('.ct');
+  ct.focus();
 }
 
 function setCommentDraftFor(chash, ctext = '') {
@@ -227,6 +229,8 @@ function setCommentDraftFor(chash, ctext = '') {
   if (ctext) {
     repl.querySelector('.ct').textContent = ctext;
   }
+
+  return repl;
 }
 
 async function renderComments() {

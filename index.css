@@ -45,8 +45,8 @@ body.mobile {
   outline: none;
 }
 
-.cm.draft > .ct {
-  color: #444;
+.cm.draft {
+  background: #ff8;
 }
 
 .cm > .hd {

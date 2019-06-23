@@ -168,7 +168,9 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             return;
         let comm = findCommentContainer(target);
         let chash = getCommentId(comm);
-        setCommentDraftFor(chash);
+        let draft = setCommentDraftFor(chash);
+        let ct = draft.querySelector('.ct');
+        ct.focus();
     }
     function setCommentDraftFor(chash, ctext = '') {
         if (chash == gTopic) {
@@ -194,6 +196,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (ctext) {
             repl.querySelector('.ct').textContent = ctext;
         }
+        return repl;
     }
     async function renderComments() {
         let topicId = location.hash.slice(1);
