@@ -4,10 +4,8 @@ body {
   margin: 0.5em;
 }
 
-@media (orientation: portrait) {
-  body {
-    font-size: 36pt;
-  }
+body.mobile {
+  font-size: 36pt;
 }
 
 #pii-notice {

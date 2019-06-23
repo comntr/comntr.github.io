@@ -26,6 +26,11 @@
         mod.init();
       });
     };
+
+    setTimeout(() => {
+      if ('orientation' in window)
+        document.body.classList.add('mobile');
+    });
   </script>
 
 <a href="https://github.com/comntr/webext" class="github-corner" title="View source on GitHub">
