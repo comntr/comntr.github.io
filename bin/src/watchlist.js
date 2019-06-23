@@ -1,16 +1,12 @@
-define(["require", "exports", "./log", "./storage"], function (require, exports, log_1, storage_1) {
+define(["require", "exports", "src/log", "src/storage", "src/cache"], function (require, exports, log_1, storage_1, cache_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const WATCHLIST_LSKEY = '.watchlist';
+    const META_KEY_URL = 'url';
+    const META_KEY_SIZE = 'size';
     class WatchList {
         constructor() {
             this.lsentry = storage_1.gStorage.getEntry(WATCHLIST_LSKEY);
-        }
-        static getUrlKey(hash) {
-            return hash + '.url';
-        }
-        static getSizeKey(hash) {
-            return hash + '.size';
         }
         get() {
             let value = this.lsentry.getValue();
@@ -20,26 +16,24 @@ define(["require", "exports", "./log", "./storage"], function (require, exports,
             let value = hashes.join(',');
             this.lsentry.setValue(value);
         }
-        setUrl(hash, url) {
-            let key = WatchList.getUrlKey(hash);
-            let lse = storage_1.gStorage.getEntry(key);
-            lse.setValue(url);
+        async setUrl(hash, url) {
+            let t = cache_1.gCache.getTopic(hash);
+            return t.metadata.set(META_KEY_URL, url);
         }
-        getUrl(hash) {
-            let key = WatchList.getUrlKey(hash);
-            let lse = storage_1.gStorage.getEntry(key);
-            return lse.getValue();
+        async getUrl(hash) {
+            let t = cache_1.gCache.getTopic(hash);
+            return t.metadata.get(META_KEY_URL);
         }
-        setSize(hash, size) {
-            let key = WatchList.getSizeKey(hash);
-            let lse = storage_1.gStorage.getEntry(key);
-            lse.setValue(size + '');
+        async setSize(hash, size) {
+            let t = cache_1.gCache.getTopic(hash);
+            return t.metadata.set(META_KEY_SIZE, size);
         }
-        getSize(hash) {
-            let key = WatchList.getSizeKey(hash);
-            return +localStorage.getItem(key) || 0;
+        async getSize(hash) {
+            let t = cache_1.gCache.getTopic(hash);
+            return t.metadata.get(META_KEY_SIZE)
+                .then(n => n || 0);
         }
-        add(hash, url) {
+        async add(hash, url) {
             log_1.log('Adding URL to the watchlist:', url);
             let hashes = this.get();
             let i = hashes.findIndex(h => h == hash);
@@ -48,10 +42,10 @@ define(["require", "exports", "./log", "./storage"], function (require, exports,
             hashes.splice(0, 0, hash);
             this.set(hashes);
             if (url)
-                this.setUrl(hash, url);
+                await this.setUrl(hash, url);
         }
-        isWatched(hash) {
-            return !!this.getUrl(hash);
+        async isWatched(hash) {
+            return !!await this.getUrl(hash);
         }
     }
     exports.gWatchlist = new WatchList;

@@ -1,10 +1,22 @@
 import { xorall, hs2a, a2hs } from './hashutil';
 import { log } from './log';
 import { gStorage, LSEntry } from './storage';
+import * as db from 'src/db';
+
+//  /indexedDb
+//    /<t-hash>                 <-- DB
+//      /metadata               <-- Object store with topic metadata
+//        ("xorhash", "...")
+//      /comments               <-- Object store with topic comments
+//        (<c-hash>, <c-data>)
+//        ...
 
 const LRU_CACHE_TOPICS_KEY = '.cache.topics';
 const LRU_CACHE_TOPICS_CAP = 100;
 const LRU_CACHE_TOPICS_SEP = ',';
+const DB_TABLE_COMMENTS = 'comments';
+const DB_TABLE_METADATA = 'metadata';
+const DB_ENTRY_XORHASH = 'xorhash';
 
 type THash = string;
 type CHash = string;
@@ -38,9 +50,9 @@ class LRUCache {
       let removed = this.thashes.splice(0, diff);
       for (let h of removed) {
         log('Uncaching topic:', h);
-        let t = this.topics[h];
+        let t = this.topics.get(h);
         this.topics.delete(h);
-        if (t) t.remove();
+        t.remove();
       }
     }
 
@@ -50,55 +62,57 @@ class LRUCache {
   }
 }
 
-// <t-hash>.comments = [<c-hash>, <c-hash>, ...]
-// <t-hash>.xorhash = <...>
-// <c-hash>.data = <...>
 class CachedTopic {
-  private lsentry: LSEntry;
-  private lsxorhash: LSEntry;
+  private db: db.DB;
+  private ct: db.Table<string>; // comments table
+  private mt: db.Table<any>; // metadata table
 
-  constructor(private thash: string) {
-    this.lsentry = gStorage.getEntry(thash + '.comments');
-    this.lsxorhash = gStorage.getEntry(thash + '.xorhash');
+  metadata = {
+    get: key => this.mt.get(key),
+    set: (key, value) => this.mt.set(key, value),
+    remove: key => this.mt.remove(key),
+  };
+
+  constructor(thash: string) {
+    this.db = db.openDb(thash);
+    this.ct = this.db.openTable<string>(DB_TABLE_COMMENTS);
+    this.mt = this.db.openTable<string>(DB_TABLE_METADATA);
   }
 
-  getCommentData(chash: CHash) {
-    return gStorage.getEntry(chash + '.data').getValue();
+  getCommentData(chash: CHash): Promise<string> {
+    return this.ct.get(chash);
   }
 
-  addComment(chash: CHash, cdata: string) {
-    gStorage.getEntry(chash + '.data').setValue(cdata);
+  addComment(chash: CHash, cdata: string): Promise<void> {
+    return this.ct.set(chash, cdata);
   }
 
-  getCommentHashes() {
-    let list = this.lsentry.getValue();
-    return !list ? [] : list.split(LRU_CACHE_TOPICS_SEP);
+  getCommentHashes(): Promise<string[]> {
+    return this.ct.keys();
   }
 
-  setCommentHashes(list) {
-    this.lsentry.setValue(list.join(LRU_CACHE_TOPICS_SEP));
+  async setCommentHashes(list: string[]) {
     let xorh = xorall(list.map(hs2a));
     if (!xorh) return;
-    log('New cached xorhash:', a2hs(xorh));
-    this.lsxorhash.setValue(a2hs(xorh));
+    log('New xorhash:', a2hs(xorh));
+    await this.mt.set(DB_ENTRY_XORHASH, a2hs(xorh)); 
   }
 
-  getXorHash() {
-    return this.lsxorhash.getValue();
+  async getXorHash() {
+    return this.mt.get(DB_ENTRY_XORHASH);
   }
 
-  remove() {
-    for (let chash of this.getCommentHashes()) {
-      let lse = gStorage.getEntry(chash + '.data');
-      let cdata = lse.getValue();
-      lse.setValue(null);
-      gStorage.getEntry(cdata).setValue(null);
-    }
-
-    this.lsentry.setValue(null);
+  async remove() {
+    for (let chash of await this.getCommentHashes())
+      await this.ct.remove(chash);
+    await this.mt.remove(DB_ENTRY_XORHASH);
   }
 }
 
+interface CMemCache {
+  [chash: string]: string;
+}
+
 export const gCache = new LRUCache;
-export const gComments = {};
+export const gComments: CMemCache = {};
 

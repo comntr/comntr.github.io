@@ -1,64 +1,57 @@
-import { log } from './log';
-import { gStorage } from './storage';
+import { log } from 'src/log';
+import { gStorage } from 'src/storage';
+import { gCache } from 'src/cache';
 
 const WATCHLIST_LSKEY = '.watchlist';
+const META_KEY_URL = 'url';
+const META_KEY_SIZE = 'size';
 
 class WatchList {
   private lsentry = gStorage.getEntry(WATCHLIST_LSKEY);
-
-  static getUrlKey(hash) {
-    return hash + '.url';
-  }
-
-  static getSizeKey(hash) {
-    return hash + '.size';
-  }
 
   get() {
     let value = this.lsentry.getValue();
     return !value ? [] : value.split(',');
   }
 
-  set(hashes) {
+  set(hashes: string[]) {
     let value = hashes.join(',');
     this.lsentry.setValue(value);
   }
 
-  setUrl(hash, url: string) {
-    let key = WatchList.getUrlKey(hash);
-    let lse = gStorage.getEntry(key);
-    lse.setValue(url);
+  async setUrl(hash: string, url: string): Promise<void> {
+    let t = gCache.getTopic(hash);
+    return t.metadata.set(META_KEY_URL, url);
   }
 
-  getUrl(hash) {
-    let key = WatchList.getUrlKey(hash);
-    let lse = gStorage.getEntry(key);
-    return lse.getValue();
+  async getUrl(hash: string): Promise<string> {
+    let t = gCache.getTopic(hash);
+    return t.metadata.get(META_KEY_URL);
   }
 
-  setSize(hash, size) {
-    let key = WatchList.getSizeKey(hash);
-    let lse = gStorage.getEntry(key);
-    lse.setValue(size + '');
+  async setSize(hash: string, size: number): Promise<void> {
+    let t = gCache.getTopic(hash);
+    return t.metadata.set(META_KEY_SIZE, size);
   }
 
-  getSize(hash) {
-    let key = WatchList.getSizeKey(hash);
-    return +localStorage.getItem(key) || 0;
+  async getSize(hash: string): Promise<number> {
+    let t = gCache.getTopic(hash);
+    return t.metadata.get(META_KEY_SIZE)
+      .then(n => n || 0);
   }
 
-  add(hash, url) {
+  async add(hash: string, url: string) {
     log('Adding URL to the watchlist:', url);
     let hashes = this.get();
     let i = hashes.findIndex(h => h == hash);
     if (i >= 0) hashes.splice(i, 1);
     hashes.splice(0, 0, hash);
     this.set(hashes);
-    if (url) this.setUrl(hash, url);
+    if (url) await this.setUrl(hash, url);
   }
 
-  isWatched(hash) {
-    return !!this.getUrl(hash);
+  async isWatched(hash) {
+    return !!await this.getUrl(hash);
   }
 }
 

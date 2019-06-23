@@ -2,12 +2,14 @@
   "scripts": {
     "start": "npm run build; npm run server",
     "clean": "rm -rf ./bin",
+    "lint": "node_modules/.bin/tslint --project tsconfig.json",
     "build": "npm i; npm run clean; node_modules/.bin/tsc; npm run cplibs",
     "cplibs": "rsync -a node_modules/supercop.wasm/src/* bin/supercop",
     "server": "killall -q webfsd; sudo webfsd -F -l - -p 80 -r . -f index.html"
   },
   "devDependencies": {
     "typescript": "3.5.1",
+    "tslint": "5.18.0",
     "@types/requirejs": "2.1.31"
   },
   "dependencies": {

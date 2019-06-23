@@ -66,9 +66,9 @@ class CommentSender {
     let body = await this.makeCommentBody({ text, parent });
     let hash = await sha1(body);
     gComments[hash] = body;
-    this.cacheComment(topic, hash, body);
+    await this.cacheComment(topic, hash, body);
     this.stageComment(hash, topic);
-    this.tryToSendComment(hash);
+    this.tryToSendComment(hash).then();
     return { hash, body };
   }
 
@@ -109,13 +109,13 @@ class CommentSender {
     log('Trying to send pending comments:', count);
 
     for (let hash in this.pending)
-      this.tryToSendComment(hash);
+      this.tryToSendComment(hash).then();
   }
 
   private async tryToSendComment(hash) {
     log('Trying to send comment:', hash);
     let topic = this.pending[hash];
-    let body = gCache.getTopic(topic).getCommentData(hash);
+    let body = await gCache.getTopic(topic).getCommentData(hash);
     try {
       await gDataServer.postComment(topic, { hash, body });
       log('Comment sent:', hash);
@@ -142,10 +142,11 @@ class CommentSender {
     }
   }
 
-  private cacheComment(thash, chash, cbody) {
+  private async cacheComment(thash, chash, cbody) {
     let tcache = gCache.getTopic(thash);
-    tcache.addComment(chash, cbody);
-    tcache.setCommentHashes([chash, ...tcache.getCommentHashes()]);
+    await tcache.addComment(chash, cbody);
+    let chashes = await tcache.getCommentHashes();
+    await tcache.setCommentHashes([chash, ...chashes]);
   }
 
   private async postRandomComments({

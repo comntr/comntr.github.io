@@ -1,9 +1,19 @@
-define(["require", "exports", "./hashutil", "./log", "./storage"], function (require, exports, hashutil_1, log_1, storage_1) {
+define(["require", "exports", "./hashutil", "./log", "./storage", "src/db"], function (require, exports, hashutil_1, log_1, storage_1, db) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    //  /indexedDb
+    //    /<t-hash>                 <-- DB
+    //      /metadata               <-- Object store with topic metadata
+    //        ("xorhash", "...")
+    //      /comments               <-- Object store with topic comments
+    //        (<c-hash>, <c-data>)
+    //        ...
     const LRU_CACHE_TOPICS_KEY = '.cache.topics';
     const LRU_CACHE_TOPICS_CAP = 100;
     const LRU_CACHE_TOPICS_SEP = ',';
+    const DB_TABLE_COMMENTS = 'comments';
+    const DB_TABLE_METADATA = 'metadata';
+    const DB_ENTRY_XORHASH = 'xorhash';
     class LRUCache {
         constructor() {
             this.topics = new Map();
@@ -28,10 +38,9 @@ define(["require", "exports", "./hashutil", "./log", "./storage"], function (req
                 let removed = this.thashes.splice(0, diff);
                 for (let h of removed) {
                     log_1.log('Uncaching topic:', h);
-                    let t = this.topics[h];
+                    let t = this.topics.get(h);
                     this.topics.delete(h);
-                    if (t)
-                        t.remove();
+                    t.remove();
                 }
             }
             let list = this.thashes.join(LRU_CACHE_TOPICS_SEP);
@@ -39,44 +48,40 @@ define(["require", "exports", "./hashutil", "./log", "./storage"], function (req
             return topic;
         }
     }
-    // <t-hash>.comments = [<c-hash>, <c-hash>, ...]
-    // <t-hash>.xorhash = <...>
-    // <c-hash>.data = <...>
     class CachedTopic {
         constructor(thash) {
-            this.thash = thash;
-            this.lsentry = storage_1.gStorage.getEntry(thash + '.comments');
-            this.lsxorhash = storage_1.gStorage.getEntry(thash + '.xorhash');
+            this.metadata = {
+                get: key => this.mt.get(key),
+                set: (key, value) => this.mt.set(key, value),
+                remove: key => this.mt.remove(key),
+            };
+            this.db = db.openDb(thash);
+            this.ct = this.db.openTable(DB_TABLE_COMMENTS);
+            this.mt = this.db.openTable(DB_TABLE_METADATA);
         }
         getCommentData(chash) {
-            return storage_1.gStorage.getEntry(chash + '.data').getValue();
+            return this.ct.get(chash);
         }
         addComment(chash, cdata) {
-            storage_1.gStorage.getEntry(chash + '.data').setValue(cdata);
+            return this.ct.set(chash, cdata);
         }
         getCommentHashes() {
-            let list = this.lsentry.getValue();
-            return !list ? [] : list.split(LRU_CACHE_TOPICS_SEP);
+            return this.ct.keys();
         }
-        setCommentHashes(list) {
-            this.lsentry.setValue(list.join(LRU_CACHE_TOPICS_SEP));
+        async setCommentHashes(list) {
             let xorh = hashutil_1.xorall(list.map(hashutil_1.hs2a));
             if (!xorh)
                 return;
-            log_1.log('New cached xorhash:', hashutil_1.a2hs(xorh));
-            this.lsxorhash.setValue(hashutil_1.a2hs(xorh));
+            log_1.log('New xorhash:', hashutil_1.a2hs(xorh));
+            await this.mt.set(DB_ENTRY_XORHASH, hashutil_1.a2hs(xorh));
         }
-        getXorHash() {
-            return this.lsxorhash.getValue();
+        async getXorHash() {
+            return this.mt.get(DB_ENTRY_XORHASH);
         }
-        remove() {
-            for (let chash of this.getCommentHashes()) {
-                let lse = storage_1.gStorage.getEntry(chash + '.data');
-                let cdata = lse.getValue();
-                lse.setValue(null);
-                storage_1.gStorage.getEntry(cdata).setValue(null);
-            }
-            this.lsentry.setValue(null);
+        async remove() {
+            for (let chash of await this.getCommentHashes())
+                await this.ct.remove(chash);
+            await this.mt.remove(DB_ENTRY_XORHASH);
         }
     }
     exports.gCache = new LRUCache;

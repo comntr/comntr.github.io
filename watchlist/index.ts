@@ -12,7 +12,8 @@ async function refreshList() {
   let hashes = gWatchlist.get();
   if (hashes.length < 1) return;
 
-  let urls = hashes.map(h => gWatchlist.getUrl(h));
+  let urls = await Promise.all(
+    hashes.map(h => gWatchlist.getUrl(h)));
   let htmls = [];
 
   for (let i = 0; i < urls.length; i++) {
@@ -35,7 +36,7 @@ async function refreshList() {
   for (let i = 0; i < hashes.length; i++) {
     let hash = hashes[i];
     let count = counts[i];
-    let lastSeen = gWatchlist.getSize(hash);
+    let lastSeen = await gWatchlist.getSize(hash);
     let diff = count - lastSeen;
     let selector = `div#_${hash} > span`;
     let span = document.querySelector(selector);

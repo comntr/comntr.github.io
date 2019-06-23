@@ -9,7 +9,7 @@ define(["require", "exports", "src/log", "src/watchlist", "src/dataserver"], fun
         let hashes = watchlist_1.gWatchlist.get();
         if (hashes.length < 1)
             return;
-        let urls = hashes.map(h => watchlist_1.gWatchlist.getUrl(h));
+        let urls = await Promise.all(hashes.map(h => watchlist_1.gWatchlist.getUrl(h)));
         let htmls = [];
         for (let i = 0; i < urls.length; i++) {
             let hash = hashes[i];
@@ -29,7 +29,7 @@ define(["require", "exports", "src/log", "src/watchlist", "src/dataserver"], fun
         for (let i = 0; i < hashes.length; i++) {
             let hash = hashes[i];
             let count = counts[i];
-            let lastSeen = watchlist_1.gWatchlist.getSize(hash);
+            let lastSeen = await watchlist_1.gWatchlist.getSize(hash);
             let diff = count - lastSeen;
             let selector = `div#_${hash} > span`;
             let span = document.querySelector(selector);

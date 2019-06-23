@@ -177,7 +177,7 @@ function loadDrafts() {
 function handleCommentsAreaClick(target) {
   handleCollapseButtonClick(target);
   handleReplyButtonClick(target);
-  handlePostCommentButtonClick(target);
+  handlePostCommentButtonClick(target).then();
 }
 
 function handleCollapseButtonClick(target) {
@@ -262,8 +262,8 @@ async function renderComments() {
 
   gTopic = topicId;
   await getComments(topicId);
-  markAllCommentsAsRead();
-  updateAllCommentStates();
+  await markAllCommentsAsRead();
+  await updateAllCommentStates();
 }
 
 function updateAllCommentStates() {
@@ -273,11 +273,11 @@ function updateAllCommentStates() {
     updateCommentState(chash);
 }
 
-function markAllCommentsAsRead() {
-  if (!gWatchlist.isWatched(gTopic)) return;
+async function markAllCommentsAsRead() {
+  if (!await gWatchlist.isWatched(gTopic)) return;
   let size = Object.keys(gComments || {}).length;
   log(`Marking all ${size} comments as read.`);
-  gWatchlist.setSize(gTopic, size);
+  await gWatchlist.setSize(gTopic, size);
 }
 
 async function handlePostCommentButtonClick(buttonAdd) {
@@ -313,8 +313,8 @@ async function handlePostCommentButtonClick(buttonAdd) {
     buttonAdd.style.display = '';
   }
 
-  gWatchlist.add(gTopic, gURL);
-  markAllCommentsAsRead();
+  await gWatchlist.add(gTopic, gURL);
+  await markAllCommentsAsRead();
 }
 
 function renderHtmlAsElement(html) {
@@ -323,6 +323,15 @@ function renderHtmlAsElement(html) {
   let element = container.children[0];
   container.innerHTML = '';
   return element as HTMLElement;
+}
+
+async function runAsyncStep<T>(label, fn: () => Promise<T>) {
+  log.i('Started:', label);
+  let time = Date.now();
+  let res = await fn();
+  let diff = Date.now() - time;
+  if (diff > 10) log.w('Done:', label, diff, 'ms');
+  return res;
 }
 
 async function getComments(thash = gTopic) {
@@ -334,77 +343,102 @@ async function getComments(thash = gTopic) {
   try {
     status.textContent = 'Fetching comments.';
     let tcache = gCache.getTopic(thash);
-    let xorhash = tcache.getXorHash();
+    let xorhash = await tcache.getXorHash();
     log('Cached xorhash:', xorhash);
-    let list = [];
 
-    try {
-      list = await gDataServer.fetchComments(thash, xorhash);
-    } catch (err) {
-      log.e('Failed to get comments:', err);
-    }
-
-    log('Hashing comments.');
-    let htime = Date.now();
-
-    gComments = {};
-
-    for (let chash of tcache.getCommentHashes()) {
-      let cbody = tcache.getCommentData(chash);
-      gComments[chash] = cbody;
-    }
-
-    let tasks = list.map(data => {
-      return sha1(data).then(hash => {
-        gComments[hash] = data;
-        tcache.addComment(hash, data);
+    let rcdata = await runAsyncStep(
+      'Fetching comments.',
+      async () => {
+        try {
+          return await gDataServer.fetchComments(thash, xorhash);
+        } catch (err) {
+          log.e('Failed to get comments:', err);
+          return [];
+        }
       });
-    });
-    await Promise.all(tasks);
-    tcache.setCommentHashes(Object.keys(gComments));
-    log('Hashing time:', Date.now() - htime, 'ms');
+
+    let rchashes = await runAsyncStep(
+      `Computing SHA1 for the ${rcdata.length} fetched comments.`,
+      () => Promise.all(rcdata.map(sha1)));
+
+    let chashes = await runAsyncStep(
+      'Getting comment hashes from the DB.',
+      () => tcache.getCommentHashes());
+
+    await runAsyncStep(
+      'Reading comment data from the DB.',
+      async () => {
+        gComments = {};
+        for (let chash of chashes) {
+          let cbody = await tcache.getCommentData(chash);
+          gComments[chash] = cbody;
+        }
+      });
+
+    await runAsyncStep(
+      'Saving new comments to the DB.',
+      async () => {
+        for (let i = 0; i < rchashes.length; i++) {
+          let data = rcdata[i];
+          let hash = rchashes[i];
+
+          if (gComments[hash]) continue;
+
+          gComments[hash] = data;
+          await tcache.addComment(hash, data);
+        }
+      });
+
+    await runAsyncStep(
+      'Updating the xorhash.',
+      () => tcache.setCommentHashes(Object.keys(gComments)));
+
     updateCommentsCount();
 
-    log('Generating html.');
-    let rtime = Date.now();
     let comments = [];
     let byhash = {};
 
-    for (let hash in gComments) {
-      try {
-        let body = gComments[hash];
-        let parsed = parseCommentBody(body, hash);
-        comments.push(parsed);
-        byhash[parsed.hash] = parsed;
-      } catch (error) {
-        log('Bad comment:', error)
-      }
-    }
+    await runAsyncStep(
+      'Generating html.',
+      async () => {
+        for (let hash in gComments) {
+          try {
+            let body = gComments[hash];
+            let parsed = parseCommentBody(body, hash);
+            comments.push(parsed);
+            byhash[parsed.hash] = parsed;
+          } catch (error) {
+            log.e('Bad comment:', error)
+          }
+        }
+      });
 
-    log('Generating tree of comments:', comments.length);
-    let tree = { [gTopic]: [] };
+    await runAsyncStep(
+      'Generating tree of comments.',
+      async () => {
+        let tree = { [gTopic]: [] };
 
-    for (let { hash, parent } of comments) {
-      tree[parent] = tree[parent] || [];
-      tree[parent].push(hash);
-    }
+        for (let { hash, parent } of comments) {
+          tree[parent] = tree[parent] || [];
+          tree[parent].push(hash);
+        }
 
-    let render = phash => {
-      let htmls = [];
-      let hashes = tree[phash] || [];
-      hashes.sort((h1, h2) => byhash[h2].date - byhash[h1].date);
-      for (let chash of hashes) {
-        let subc = render(chash);
-        let comm = byhash[chash];
-        let html = makeCommentHtml({ ...comm, subc });
-        htmls.push(html);
-      }
-      return htmls.join('\n');
-    };
+        let render = phash => {
+          let htmls = [];
+          let hashes = tree[phash] || [];
+          hashes.sort((h1, h2) => byhash[h2].date - byhash[h1].date);
+          for (let chash of hashes) {
+            let subc = render(chash);
+            let comm = byhash[chash];
+            let html = makeCommentHtml({ ...comm, subc });
+            htmls.push(html);
+          }
+          return htmls.join('\n');
+        };
 
-    $.comments.innerHTML += render(gTopic);
-    rtime = Date.now() - rtime;
-    log('Render time:', rtime, 'ms');
+        $.comments.innerHTML += render(gTopic);
+      });
+
     status.textContent = '';
   } catch (err) {
     log.e(err);

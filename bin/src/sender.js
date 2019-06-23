@@ -24,9 +24,9 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             let body = await this.makeCommentBody({ text, parent });
             let hash = await hashutil_1.sha1(body);
             cache_1.gComments[hash] = body;
-            this.cacheComment(topic, hash, body);
+            await this.cacheComment(topic, hash, body);
             this.stageComment(hash, topic);
-            this.tryToSendComment(hash);
+            this.tryToSendComment(hash).then();
             return { hash, body };
         }
         getCommentState(chash) {
@@ -61,12 +61,12 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
                 return;
             log_1.log('Trying to send pending comments:', count);
             for (let hash in this.pending)
-                this.tryToSendComment(hash);
+                this.tryToSendComment(hash).then();
         }
         async tryToSendComment(hash) {
             log_1.log('Trying to send comment:', hash);
             let topic = this.pending[hash];
-            let body = cache_1.gCache.getTopic(topic).getCommentData(hash);
+            let body = await cache_1.gCache.getTopic(topic).getCommentData(hash);
             try {
                 await dataserver_1.gDataServer.postComment(topic, { hash, body });
                 log_1.log('Comment sent:', hash);
@@ -93,10 +93,11 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
                 }
             }
         }
-        cacheComment(thash, chash, cbody) {
+        async cacheComment(thash, chash, cbody) {
             let tcache = cache_1.gCache.getTopic(thash);
-            tcache.addComment(chash, cbody);
-            tcache.setCommentHashes([chash, ...tcache.getCommentHashes()]);
+            await tcache.addComment(chash, cbody);
+            let chashes = await tcache.getCommentHashes();
+            await tcache.setCommentHashes([chash, ...chashes]);
         }
         async postRandomComments({ size = 100, topic = '', prefix = 'test-', } = {}) {
             let hashes = [topic];
