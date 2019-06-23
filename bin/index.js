@@ -158,9 +158,11 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let comm = findCommentContainer(target);
         let subc = comm.querySelector('.sub');
         if (subc) {
+            let n = subc.querySelectorAll('.cm').length;
             let disp = subc.style.display;
             subc.style.display = !disp ? 'none' : '';
-            target.textContent = !disp ? 'Uncollapse' : 'Collapse';
+            target.textContent = disp ? 'Collapse' :
+                n < 2 ? 'Expand' : `Expand (${n} comments)`;
         }
     }
     function handleReplyButtonClick(target) {
