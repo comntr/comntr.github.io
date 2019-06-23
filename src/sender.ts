@@ -172,6 +172,7 @@ class CommentSender {
   private async makeCommentBody({ text, parent }) {
     let body = [
       'Date: ' + new Date().toISOString(),
+      'User: ' + gUser.username.get(),
       'Parent: ' + parent,
       '',
       text,

@@ -21,6 +21,7 @@ interface UserKeys {
 }
 
 const gUserKeysLS = gStorage.getEntry('user.keys');
+const gUserNameLS = gStorage.getEntry('user.name');
 
 let gSupercop: Supercop; // Ed25519
 let gUserKeys: UserKeys;
@@ -118,7 +119,25 @@ async function verifyComment(comment: string) {
   return valid;
 }
 
+class UserNameProp {
+  get() {
+    let name = gUserNameLS.text;
+    if (!name) {
+      name = 'user-' + Math.random().toString(16).slice(2, 6);
+      log.i('Generated username:', name);
+      this.set(name);
+    }
+    return name;
+  }
+
+  set(name: string) {
+    gUserNameLS.text = name;
+    log.i('Updated username:', name);
+  }
+}
+
 export const gUser = {
   signComment,
   verifyComment,
+  username: new UserNameProp,
 };

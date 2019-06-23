@@ -114,6 +114,7 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
         async makeCommentBody({ text, parent }) {
             let body = [
                 'Date: ' + new Date().toISOString(),
+                'User: ' + user_1.gUser.username.get(),
                 'Parent: ' + parent,
                 '',
                 text,

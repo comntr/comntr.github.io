@@ -6,10 +6,12 @@ import { gDataServer } from 'src/dataserver';
 import { gSender } from 'src/sender';
 import { sha1 } from 'src/hashutil';
 import { gStorage } from 'src/storage';
+import { gUser } from './src/user';
 
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
 const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
+const COMMENT_USERNAME_PATTERN = /^User: (.+)$/m;
 const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
 const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 
@@ -450,7 +452,8 @@ function parseCommentBody(body, hash) {
   let [, date] = COMMENT_DATE_PATTERN.exec(body);
   let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
   let [, text] = COMMENT_BODY_PATTERN.exec(body);
-  return { date: new Date(date), parent, text, hash };
+  let [, user = null] = COMMENT_USERNAME_PATTERN.exec(body) || [];
+  return { user, date: new Date(date), parent, text, hash };
 }
 
 function findCommentDivByHash(chash) {
@@ -458,7 +461,9 @@ function findCommentDivByHash(chash) {
 }
 
 function createNewCommentDiv() {
-  let html = makeCommentHtml({});
+  let html = makeCommentHtml({
+    user: gUser.username.get(),
+  });
   let div = renderHtmlAsElement(html);
   div.classList.add('draft');
   return div;

@@ -6,6 +6,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log"], functio
     const SC_POLL_INTERVAL = 0.5; // seconds
     const SC_WASM_TIMEOUT = 3; // seconds
     const gUserKeysLS = storage_1.gStorage.getEntry('user.keys');
+    const gUserNameLS = storage_1.gStorage.getEntry('user.name');
     let gSupercop; // Ed25519
     let gUserKeys;
     async function getSupercop() {
@@ -97,9 +98,25 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log"], functio
         let valid = supercop.verify(signature, signedPartBytes, publicKey);
         return valid;
     }
+    class UserNameProp {
+        get() {
+            let name = gUserNameLS.text;
+            if (!name) {
+                name = 'user-' + Math.random().toString(16).slice(2, 6);
+                log_1.log.i('Generated username:', name);
+                this.set(name);
+            }
+            return name;
+        }
+        set(name) {
+            gUserNameLS.text = name;
+            log_1.log.i('Updated username:', name);
+        }
+    }
     exports.gUser = {
         signComment,
         verifyComment,
+        username: new UserNameProp,
     };
 });
 //# sourceMappingURL=user.js.map

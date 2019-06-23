@@ -1,9 +1,10 @@
-define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1) {
+define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage", "./src/user"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1, user_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
     const URL_PATTERN = /^https?:\/\//;
     const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
+    const COMMENT_USERNAME_PATTERN = /^User: (.+)$/m;
     const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
     const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
     let gURL = null;
@@ -375,13 +376,16 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let [, date] = COMMENT_DATE_PATTERN.exec(body);
         let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
         let [, text] = COMMENT_BODY_PATTERN.exec(body);
-        return { date: new Date(date), parent, text, hash };
+        let [, user = null] = COMMENT_USERNAME_PATTERN.exec(body) || [];
+        return { user, date: new Date(date), parent, text, hash };
     }
     function findCommentDivByHash(chash) {
         return $('#cm-' + chash);
     }
     function createNewCommentDiv() {
-        let html = makeCommentHtml({});
+        let html = makeCommentHtml({
+            user: user_1.gUser.username.get(),
+        });
         let div = renderHtmlAsElement(html);
         div.classList.add('draft');
         return div;
