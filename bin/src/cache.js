@@ -1,4 +1,4 @@
-define(["require", "exports", "./hashutil", "./log", "./storage", "src/db", "./config"], function (require, exports, hashutil_1, log_1, storage_1, db, config_1) {
+define(["require", "exports", "src/hashutil", "src/log", "src/storage", "src/db", "src/config"], function (require, exports, hashutil_1, log_1, storage_1, db, config_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     //  /indexedDb
@@ -8,7 +8,7 @@ define(["require", "exports", "./hashutil", "./log", "./storage", "src/db", "./c
     //      /comments               <-- Object store with topic comments
     //        (<c-hash>, <c-data>)
     //        ...
-    const LRU_CACHE_TOPICS_KEY = '.cache.topics';
+    const LRU_CACHE_TOPICS_KEY = 'sys.cache.topics';
     const LRU_CACHE_TOPICS_SEP = ',';
     const DB_TABLE_COMMENTS = 'comments';
     const DB_TABLE_METADATA = 'metadata';

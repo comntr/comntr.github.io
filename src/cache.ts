@@ -1,8 +1,8 @@
-import { xorall, hs2a, a2hs } from './hashutil';
-import { log } from './log';
-import { gStorage, LSEntry } from './storage';
+import { xorall, hs2a, a2hs } from 'src/hashutil';
+import { log } from 'src/log';
+import { gStorage } from 'src/storage';
 import * as db from 'src/db';
-import { gConfig } from './config';
+import { gConfig } from 'src/config';
 
 //  /indexedDb
 //    /<t-hash>                 <-- DB
@@ -12,7 +12,7 @@ import { gConfig } from './config';
 //        (<c-hash>, <c-data>)
 //        ...
 
-const LRU_CACHE_TOPICS_KEY = '.cache.topics';
+const LRU_CACHE_TOPICS_KEY = 'sys.cache.topics';
 const LRU_CACHE_TOPICS_SEP = ',';
 const DB_TABLE_COMMENTS = 'comments';
 const DB_TABLE_METADATA = 'metadata';

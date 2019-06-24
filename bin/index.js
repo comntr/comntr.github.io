@@ -1,6 +1,7 @@
 define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage", "./src/user"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1, user_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    const LS_DRAFTS_KEY = 'sys.drafts';
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
     const URL_PATTERN = /^https?:\/\//;
     const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
@@ -10,7 +11,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     let gURL = null;
     let gTopic = null; // SHA1
     let gComments = null; // sha1 -> data
-    let gDrafts = storage_1.gStorage.getEntry('.drafts');
+    let gDrafts = storage_1.gStorage.getEntry(LS_DRAFTS_KEY);
     let gDraftsTimer = 0;
     const $ = (selector) => document.querySelector(selector);
     $.comments = null;

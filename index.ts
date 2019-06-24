@@ -8,6 +8,7 @@ import { sha1 } from 'src/hashutil';
 import { gStorage } from 'src/storage';
 import { gUser } from './src/user';
 
+const LS_DRAFTS_KEY = 'sys.drafts';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
 const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
@@ -18,7 +19,7 @@ const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 let gURL = null;
 let gTopic = null; // SHA1
 let gComments = null; // sha1 -> data
-let gDrafts = gStorage.getEntry('.drafts');
+let gDrafts = gStorage.getEntry(LS_DRAFTS_KEY);
 let gDraftsTimer = 0;
 
 const $ = (selector: string): HTMLElement => document.querySelector(selector);
