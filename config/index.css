@@ -2,6 +2,10 @@ body {
   font-family: Ubuntu, Arial, sans-serif;
 }
 
+body.mobile {
+  font-size: 36pt;
+}
+
 #config td {
   vertical-align: top;
   padding: 0.5em;

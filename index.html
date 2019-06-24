@@ -4,6 +4,7 @@
 <head>
   <title>Comntr</title>
   <link rel="stylesheet" href="index.css">
+  <script src="/src/css-mobile.js"></script>
   <script src="/require.js"></script>
 </head>
 
@@ -30,11 +31,6 @@
         mod.init();
       });
     };
-
-    setTimeout(() => {
-      if ('orientation' in window)
-        document.body.classList.add('mobile');
-    });
   </script>
 
 <a target="_blank" rel="noopener noreferrer" href="https://github.com/comntr/webext" class="github-corner" title="View source on GitHub">
