@@ -16,7 +16,7 @@ body.mobile {
   margin: 1em;
 }
 
-#topic-url {
+#topic-url, #config-url {
   color: #888;
 }
 
@@ -39,6 +39,7 @@ body.mobile {
 
 .cm > .ct:focus {
   outline: none;
+  background: none;
 }
 
 .cm.draft {

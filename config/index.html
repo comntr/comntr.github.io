@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Config</title>
+  <link rel="stylesheet" href="index.css">
+  <script src="/require.js"></script>
+  <script>
+    requirejs.config({ baseUrl: '/bin' });
+    window.onload = () =>
+      requirejs(['config/index'],
+        mod => mod.init());
+  </script>
+</head>
+
+<body>
+  <table id="config">
+    <tbody>
+
+    </tbody>
+  </table>
+</body>
+
+</html>

@@ -1,0 +1,21 @@
+body {
+  font-family: Ubuntu, Arial, sans-serif;
+}
+
+#config td {
+  vertical-align: top;
+  padding: 0.5em;
+}
+
+#config tr:nth-child(2n+1) {
+  background: #eef;
+}
+
+#config td.key {
+  font-weight: bold;
+}
+
+#config td.val {
+  word-break: break-all;
+  word-wrap: break-word;
+}
