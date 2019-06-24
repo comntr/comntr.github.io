@@ -16,12 +16,8 @@ body.mobile {
   margin: 1em;
 }
 
-#topic {
-  word-break: break-all;
-}
-
-#topic-hash > a {
-  text-decoration: none;
+#topic-url {
+  color: #888;
 }
 
 .cm {

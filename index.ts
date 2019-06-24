@@ -33,13 +33,11 @@ export function init() {
 
   $.comments = $('#all-comments');
   $.status = $('#status');
-  $.topic = $('#topic');
+  $.topic = $('#topic-url');
   $.count = $('#comments-count') as HTMLAnchorElement;
 
-  if (gConfig.ext) {
+  if (gConfig.ext)
     log('Launched as the extension popup.');
-    $.topic.style.display = 'none';
-  }
 
   $.comments.onclick = event => handleCommentsAreaClick(event.target);
   $.comments.oninput = event => handleCommentEdited(event.target);
@@ -50,11 +48,13 @@ export function init() {
   });
 
   window.onhashchange = async () => {
-    if (gConfig.ext)
-      $.count.href = location.origin + location.hash;
-    await resetComments();
-    await renderComments();
-    await loadDrafts();
+    try {
+      await resetComments();
+      await renderComments();
+      await loadDrafts();
+    } catch (err) {
+      $.status.textContent = err;
+    }
   };
 
   window.onhashchange(null);
@@ -92,8 +92,9 @@ function updateCommentsCount() {
 
 function resetComments() {
   log('Resetting comments.');
+  $.status.textContent = '';
   $.comments.innerHTML = '';
-  $.count.textContent = '';
+  $.count.textContent = 'Fetching comments...';
   gComments = null;
   let placeholder = createNewCommentDiv();
   $.comments.appendChild(placeholder);
@@ -238,28 +239,16 @@ function setCommentDraftFor(chash, ctext = '') {
 async function renderComments() {
   let topicId = location.hash.slice(1);
   log('Rendering comments for topic:', topicId);
-
-  let topicEl = $('#topic');
-
-  if (!topicId) {
-    let sampleUrl = 'http://example.com/';
-    let sampleId = await sha1(sampleUrl);
-    let href1 = location.href + '#' + sampleUrl;
-    let href2 = location.href + '#' + sampleId;
-    topicEl.innerHTML = [
-      'Specify URL or its SHA-1:',
-      `<a href="${href1}">${href1}</a>`,
-      `<a href="${href2}">${href2}</a>`,
-    ].map(s => '<div>' + s + '</div>').join('');
-    return;
-  }
+  if (!topicId) throw new Error('topic id is null');
 
   document.title = 'Comntr - ' + topicId;
 
   if (URL_PATTERN.test(topicId)) {
-    topicEl.innerHTML = `<a href="${topicId}">${topicId}</a>`;
+    let a = $.topic.querySelector('a');
+    if (a) a.href = topicId;
   } else {
-    topicEl.textContent = topicId;
+    log.i(`The topic id doesn't look like a URL, so hiding the URL link.`);
+    $.topic.style.display = 'none';
   }
 
   if (!SHA1_PATTERN.test(topicId)) {
@@ -343,13 +332,10 @@ async function runAsyncStep<T>(label, fn: () => Promise<T>) {
 }
 
 async function getComments(thash = gTopic) {
-  let status = $('#status');
-
   if (!SHA1_PATTERN.test(thash))
     throw new Error('Invalid topic id: ' + thash);
 
   try {
-    status.textContent = 'Fetching comments.';
     let tcache = gCache.getTopic(thash);
     let xorhash = await tcache.getXorHash();
     log('Cached xorhash:', xorhash);
@@ -361,6 +347,7 @@ async function getComments(thash = gTopic) {
           return await gDataServer.fetchComments(thash, xorhash);
         } catch (err) {
           log.e('Failed to get comments:', err);
+          $.status.textContent = 'Failed to download comments: ' + err;
           return [];
         }
       });
@@ -446,11 +433,9 @@ async function getComments(thash = gTopic) {
 
         $.comments.innerHTML += render(gTopic);
       });
-
-    status.textContent = '';
   } catch (err) {
     log.e(err);
-    status.textContent = err && (err.stack || err.message || err);
+    $.status.textContent = err;
   }
 }
 
