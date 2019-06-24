@@ -1,4 +1,4 @@
-define(["require", "exports", "./hashutil", "./log", "./storage", "src/db"], function (require, exports, hashutil_1, log_1, storage_1, db) {
+define(["require", "exports", "./hashutil", "./log", "./storage", "src/db", "./config"], function (require, exports, hashutil_1, log_1, storage_1, db, config_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     //  /indexedDb
@@ -9,7 +9,6 @@ define(["require", "exports", "./hashutil", "./log", "./storage", "src/db"], fun
     //        (<c-hash>, <c-data>)
     //        ...
     const LRU_CACHE_TOPICS_KEY = '.cache.topics';
-    const LRU_CACHE_TOPICS_CAP = 100;
     const LRU_CACHE_TOPICS_SEP = ',';
     const DB_TABLE_COMMENTS = 'comments';
     const DB_TABLE_METADATA = 'metadata';
@@ -33,7 +32,7 @@ define(["require", "exports", "./hashutil", "./log", "./storage", "src/db"], fun
                 this.topics.set(thash, topic);
             }
             this.thashes.push(thash);
-            let diff = this.thashes.length - LRU_CACHE_TOPICS_CAP;
+            let diff = this.thashes.length - config_1.gConfig.lrucap.get();
             if (diff > 0) {
                 let removed = this.thashes.splice(0, diff);
                 for (let h of removed) {

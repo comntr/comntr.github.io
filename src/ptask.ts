@@ -1,5 +1,3 @@
-import { log } from 'src/log';
-
 interface PeriodicTaskArgs {
   interval: number; // seconds
   randomness: number; // 0.0..1.0

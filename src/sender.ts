@@ -5,12 +5,11 @@ import { sha1 } from 'src/hashutil';
 import { log } from 'src/log';
 import { PeriodicTask } from 'src/ptask';
 import { gStorage } from 'src/storage';
-import { gConfig } from './config';
-import { gUser } from './user';
+import { gConfig } from 'src/config';
+import { gUser } from 'src/user';
 
-const LSKEY_PENDING = '.staging.pending';
-const LSKEY_FAILED = '.staging.failed';
-const PT_RANDMNESS = 0.5;
+const LSKEY_PENDING = 'sys.staging.pending';
+const LSKEY_FAILED = 'sys.staging.failed';
 
 interface PostCommentArgs {
   text: string;
@@ -35,8 +34,6 @@ interface FailedComments {
   }
 }
 
-type CommentState = 'pending' | 'failed' | 'sent';
-
 interface CommentStateEvent {
   chash: string;
   thash: string;
@@ -50,7 +47,7 @@ class CommentSender {
 
   private pt = new PeriodicTask({
     interval: gConfig.cri.get(),
-    randomness: PT_RANDMNESS,
+    randomness: gConfig.ptr.get(),
     callback: () => this.tryToSendComments(),
   });
 

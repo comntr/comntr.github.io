@@ -1,9 +1,8 @@
-define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/hashutil", "src/log", "src/ptask", "src/storage", "./config", "./user"], function (require, exports, event_1, cache_1, dataserver_1, hashutil_1, log_1, ptask_1, storage_1, config_1, user_1) {
+define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/hashutil", "src/log", "src/ptask", "src/storage", "src/config", "src/user"], function (require, exports, event_1, cache_1, dataserver_1, hashutil_1, log_1, ptask_1, storage_1, config_1, user_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    const LSKEY_PENDING = '.staging.pending';
-    const LSKEY_FAILED = '.staging.failed';
-    const PT_RANDMNESS = 0.5;
+    const LSKEY_PENDING = 'sys.staging.pending';
+    const LSKEY_FAILED = 'sys.staging.failed';
     class CommentSender {
         constructor() {
             this.lspending = storage_1.gStorage.getEntry(LSKEY_PENDING);
@@ -12,7 +11,7 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             this.failed = this.lsfailed.json || {};
             this.pt = new ptask_1.PeriodicTask({
                 interval: config_1.gConfig.cri.get(),
-                randomness: PT_RANDMNESS,
+                randomness: config_1.gConfig.ptr.get(),
                 callback: () => this.tryToSendComments(),
             });
             this.commentStateChanged = new event_1.EventSource();

@@ -89,7 +89,12 @@ export const gConfig = {
   // interval in seconds between resending comments
   cri: msprop<number>([
     qprop('cri'),
-    lsprop('user.send.retry', 600),
+    lsprop('user.send.retry.delay', 600),
+  ]),
+
+  ptr: msprop<number>([
+    qprop('ptr'),
+    lsprop('user.send.retry.rand', 0.5),
   ]),
 
   // drafts update timeout in seconds
@@ -102,5 +107,20 @@ export const gConfig = {
   sign: msprop<boolean>([
     qprop('sign'),
     lsprop('user.send.sign', true),
+  ]),
+
+  scpi: msprop<number>([
+    qprop('scpi'),
+    lsprop('user.supercop.poll', 0.5),
+  ]),
+
+  wasmt: msprop<number>([
+    qprop('wasmt'),
+    lsprop('user.wasm.timeout', 3),
+  ]),
+
+  lrucap: msprop<number>([
+    qprop('lrucap'),
+    lsprop('user.cache.maxurls', 100),
   ]),
 };

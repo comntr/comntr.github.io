@@ -83,7 +83,11 @@ define(["require", "exports"], function (require, exports) {
         // interval in seconds between resending comments
         cri: msprop([
             qprop('cri'),
-            lsprop('user.send.retry', 600),
+            lsprop('user.send.retry.delay', 600),
+        ]),
+        ptr: msprop([
+            qprop('ptr'),
+            lsprop('user.send.retry.rand', 0.5),
         ]),
         // drafts update timeout in seconds
         dut: msprop([
@@ -94,6 +98,18 @@ define(["require", "exports"], function (require, exports) {
         sign: msprop([
             qprop('sign'),
             lsprop('user.send.sign', true),
+        ]),
+        scpi: msprop([
+            qprop('scpi'),
+            lsprop('user.supercop.poll', 0.5),
+        ]),
+        wasmt: msprop([
+            qprop('wasmt'),
+            lsprop('user.wasm.timeout', 3),
+        ]),
+        lrucap: msprop([
+            qprop('lrucap'),
+            lsprop('user.cache.maxurls', 100),
         ]),
     };
 });

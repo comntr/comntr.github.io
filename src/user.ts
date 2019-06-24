@@ -1,11 +1,10 @@
 import { gStorage } from 'src/storage';
 import { hs2a, a2hs } from 'src/hashutil';
 import { log } from 'src/log';
+import { gConfig } from './config';
 
 const SIG_HEADER = 'Signature';
 const PUBKEY_HEADER = 'Public-Key';
-const SC_POLL_INTERVAL = 0.5; // seconds
-const SC_WASM_TIMEOUT = 3; // seconds
 
 interface Supercop {
   ready(callback: Function): void;
@@ -36,7 +35,7 @@ async function getSupercop(): Promise<Supercop> {
       new Promise((resolve, reject) => {
         setTimeout(() => {
           reject(new Error('Timed out.'));
-        }, SC_WASM_TIMEOUT * 1000);
+        }, gConfig.wasmt.get() * 1000);
       }),
       new Promise((resolve, reject) => {
         requirejs(['./supercop/index'], sc => {
@@ -50,7 +49,7 @@ async function getSupercop(): Promise<Supercop> {
             } catch (err) {
               // wasm not ready
             }
-          }, SC_POLL_INTERVAL * 1000);
+          }, gConfig.scpi.get() * 1000);
         }, reject);
       }),
     ]);

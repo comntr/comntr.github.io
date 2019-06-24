@@ -2,7 +2,7 @@ import { log } from 'src/log';
 import { gStorage } from 'src/storage';
 import { gCache } from 'src/cache';
 
-const WATCHLIST_LSKEY = '.watchlist';
+const WATCHLIST_LSKEY = 'sys.watchlist';
 const META_KEY_URL = 'url';
 const META_KEY_SIZE = 'size';
 

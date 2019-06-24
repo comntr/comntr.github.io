@@ -2,6 +2,7 @@ import { xorall, hs2a, a2hs } from './hashutil';
 import { log } from './log';
 import { gStorage, LSEntry } from './storage';
 import * as db from 'src/db';
+import { gConfig } from './config';
 
 //  /indexedDb
 //    /<t-hash>                 <-- DB
@@ -12,7 +13,6 @@ import * as db from 'src/db';
 //        ...
 
 const LRU_CACHE_TOPICS_KEY = '.cache.topics';
-const LRU_CACHE_TOPICS_CAP = 100;
 const LRU_CACHE_TOPICS_SEP = ',';
 const DB_TABLE_COMMENTS = 'comments';
 const DB_TABLE_METADATA = 'metadata';
@@ -45,7 +45,7 @@ class LRUCache {
 
     this.thashes.push(thash);
 
-    let diff = this.thashes.length - LRU_CACHE_TOPICS_CAP;
+    let diff = this.thashes.length - gConfig.lrucap.get();
     if (diff > 0) {
       let removed = this.thashes.splice(0, diff);
       for (let h of removed) {

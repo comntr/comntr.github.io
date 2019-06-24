@@ -1,7 +1,7 @@
 define(["require", "exports", "src/log", "src/storage", "src/cache"], function (require, exports, log_1, storage_1, cache_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    const WATCHLIST_LSKEY = '.watchlist';
+    const WATCHLIST_LSKEY = 'sys.watchlist';
     const META_KEY_URL = 'url';
     const META_KEY_SIZE = 'size';
     class WatchList {

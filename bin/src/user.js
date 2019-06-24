@@ -1,10 +1,8 @@
-define(["require", "exports", "src/storage", "src/hashutil", "src/log"], function (require, exports, storage_1, hashutil_1, log_1) {
+define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./config"], function (require, exports, storage_1, hashutil_1, log_1, config_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const SIG_HEADER = 'Signature';
     const PUBKEY_HEADER = 'Public-Key';
-    const SC_POLL_INTERVAL = 0.5; // seconds
-    const SC_WASM_TIMEOUT = 3; // seconds
     const gPublicKeyLS = storage_1.gStorage.getEntry('user.keys.public');
     const gSecretKeyLS = storage_1.gStorage.getEntry('user.keys.private');
     const gUserNameLS = storage_1.gStorage.getEntry('user.name');
@@ -19,7 +17,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log"], functio
                 new Promise((resolve, reject) => {
                     setTimeout(() => {
                         reject(new Error('Timed out.'));
-                    }, SC_WASM_TIMEOUT * 1000);
+                    }, config_1.gConfig.wasmt.get() * 1000);
                 }),
                 new Promise((resolve, reject) => {
                     requirejs(['./supercop/index'], sc => {
@@ -34,7 +32,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log"], functio
                             catch (err) {
                                 // wasm not ready
                             }
-                        }, SC_POLL_INTERVAL * 1000);
+                        }, config_1.gConfig.scpi.get() * 1000);
                     }, reject);
                 }),
             ]);
