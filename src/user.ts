@@ -20,7 +20,8 @@ interface UserKeys {
   secretKey: Uint8Array; // 64 bytes
 }
 
-const gUserKeysLS = gStorage.getEntry('user.keys');
+const gPublicKeyLS = gStorage.getEntry('user.keys.public');
+const gSecretKeyLS = gStorage.getEntry('user.keys.private');
 const gUserNameLS = gStorage.getEntry('user.name');
 
 let gSupercop: Supercop; // Ed25519
@@ -64,11 +65,13 @@ async function getSupercop(): Promise<Supercop> {
 async function getUserKeys() {
   if (gUserKeys) return gUserKeys;
 
-  let keys = gUserKeysLS.json;
-  if (keys) {
+  let pubKey = gPublicKeyLS.text;
+  let secKey = gSecretKeyLS.text;
+
+  if (pubKey && secKey) {
     return gUserKeys = {
-      publicKey: hs2a(keys.publicKey),
-      secretKey: hs2a(keys.secretKey),
+      publicKey: hs2a(pubKey),
+      secretKey: hs2a(secKey),
     };
   }
 
@@ -76,10 +79,8 @@ async function getUserKeys() {
   log.i('Generating ed25519 keys.');
   let seed = supercop.createSeed();
   gUserKeys = supercop.createKeyPair(seed);
-  gUserKeysLS.json = {
-    publicKey: a2hs(gUserKeys.publicKey),
-    secretKey: a2hs(gUserKeys.secretKey),
-  };
+  gPublicKeyLS.text = a2hs(gUserKeys.publicKey);
+  gSecretKeyLS.text = a2hs(gUserKeys.secretKey);
   return gUserKeys;
 }
 

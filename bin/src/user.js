@@ -5,7 +5,8 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log"], functio
     const PUBKEY_HEADER = 'Public-Key';
     const SC_POLL_INTERVAL = 0.5; // seconds
     const SC_WASM_TIMEOUT = 3; // seconds
-    const gUserKeysLS = storage_1.gStorage.getEntry('user.keys');
+    const gPublicKeyLS = storage_1.gStorage.getEntry('user.keys.public');
+    const gSecretKeyLS = storage_1.gStorage.getEntry('user.keys.private');
     const gUserNameLS = storage_1.gStorage.getEntry('user.name');
     let gSupercop; // Ed25519
     let gUserKeys;
@@ -47,21 +48,20 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log"], functio
     async function getUserKeys() {
         if (gUserKeys)
             return gUserKeys;
-        let keys = gUserKeysLS.json;
-        if (keys) {
+        let pubKey = gPublicKeyLS.text;
+        let secKey = gSecretKeyLS.text;
+        if (pubKey && secKey) {
             return gUserKeys = {
-                publicKey: hashutil_1.hs2a(keys.publicKey),
-                secretKey: hashutil_1.hs2a(keys.secretKey),
+                publicKey: hashutil_1.hs2a(pubKey),
+                secretKey: hashutil_1.hs2a(secKey),
             };
         }
         let supercop = await getSupercop();
         log_1.log.i('Generating ed25519 keys.');
         let seed = supercop.createSeed();
         gUserKeys = supercop.createKeyPair(seed);
-        gUserKeysLS.json = {
-            publicKey: hashutil_1.a2hs(gUserKeys.publicKey),
-            secretKey: hashutil_1.a2hs(gUserKeys.secretKey),
-        };
+        gPublicKeyLS.text = hashutil_1.a2hs(gUserKeys.publicKey);
+        gSecretKeyLS.text = hashutil_1.a2hs(gUserKeys.secretKey);
         return gUserKeys;
     }
     function getTextBytes(text) {
