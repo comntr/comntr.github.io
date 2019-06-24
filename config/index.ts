@@ -7,19 +7,38 @@ const storage = localStorage;
 log.i('Module loaded. Now index.html needs to call init().');
 window.onhashchange = init;
 
-export function init() {
+export async function init() {
   let tbody = document.querySelector(CONFIG_TABLE_SEL + ' > tbody');
   tbody.innerHTML = '';
+  setPropSavedHandler();
   log.i('Getting config from LS.');
   let filter = location.hash.slice(1).trim();
   if (filter) log.i('Filtering props by:', filter);
+  let keys = getStorageKeys();
+  log.i('All keys:', keys.length);
+  keys = keys.filter(key => !filter || key.indexOf(filter) >= 0);
+  keys.sort();
+  log.i('Keys filtered and sorted:', keys.length);
+  for (let key of keys) {
+    await sleep(0); // to unblock UI
+    addConfigProp(key);
+  }
+  log.i('Added all config props.');  
+}
+
+function getStorageKeys(): string[] {
+  let keys = [];
   for (let i = 0; i < storage.length; i++) {
     let key = storage.key(i);
-    if (!filter || key.indexOf(filter) >= 0)
-      addConfigProp(key);
+    keys.push(key);
   }
-  log.i('Added all config props.');
-  setPropSavedHandler();
+  return keys;
+}
+
+function sleep(dt: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, dt * 1000);
+  });
 }
 
 function addConfigProp(key: string) {
