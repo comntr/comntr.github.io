@@ -40,7 +40,14 @@ function lsprop<T>(name: string, defval?: T): Prop<T> {
   return {
     get() {
       let str = localStorage.getItem(name);
-      if (!str) return defval;
+      if (!str) {
+        if (defval !== undefined) {
+          let json = typeof defval === 'string' ?
+            defval : JSON.stringify(defval);
+          localStorage.setItem(name, json);
+        }
+        return defval;
+      }
 
       try {
         return JSON.parse(str);
@@ -67,13 +74,33 @@ function msprop<T>(props: Prop<T>[], defval?: T): Prop<T> {
 
 export const gConfig = {
   ext: qprop('ext', false),
+
   // add-comment throttling: 0.99 would throttle 99% of attempts
-  act: qprop('act', 0.0),
-  srv: qprop('srv', 'https://comntr.live:42751'),
+  act: msprop<number>([
+    qprop('act'),
+    lsprop('debug.send.throttling', 0.0),
+  ]),
+
+  srv: msprop<string>([
+    qprop('srv'),
+    lsprop('user.remote.url', 'https://comntr.live:42751'),
+  ]),
+
   // interval in seconds between resending comments
-  cri: qprop('cri', 600),
+  cri: msprop<number>([
+    qprop('cri'),
+    lsprop('user.send.retry', 600),
+  ]),
+
   // drafts update timeout in seconds
-  dut: qprop('dut', 1),
+  dut: msprop<number>([
+    qprop('dut'),
+    lsprop('user.edit.timeout', 1),
+  ]),
+
   // signs all comments before sending
-  sign: qprop('sign', true),
+  sign: msprop<boolean>([
+    qprop('sign'),
+    lsprop('user.send.sign', true),
+  ]),
 };

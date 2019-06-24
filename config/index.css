@@ -3,7 +3,11 @@ body {
 }
 
 body.mobile {
-  font-size: 36pt;
+  font-size: 24pt;
+}
+
+#config {
+  width: 100%;
 }
 
 #config td {
@@ -17,6 +21,9 @@ body.mobile {
 
 #config td.key {
   font-weight: bold;
+  width: 10em;
+  word-break: break-all;
+  word-wrap: break-word;
 }
 
 #config td.val {
