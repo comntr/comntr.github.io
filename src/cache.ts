@@ -52,6 +52,7 @@ class LRUCache {
         log('Uncaching topic:', h);
         let t = this.topics.get(h);
         this.topics.delete(h);
+        // tslint:disable-next-line:no-floating-promises
         t.remove();
       }
     }

@@ -11,11 +11,11 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
     exports.HttpError = HttpError;
     class DataServer {
         async postComment(topicId, { hash, body }) {
-            let host = config_1.gConfig.srv;
+            let host = config_1.gConfig.srv.get();
             let url = host + '/' + topicId + '/' + hash;
             log_1.log('POST ' + url + '\n' + body);
-            if (config_1.gConfig.act > 0 && Math.random() < config_1.gConfig.act)
-                throw new HttpError(567, 'Throttled with ?act=' + config_1.gConfig.act);
+            if (config_1.gConfig.act.get() > 0 && Math.random() < config_1.gConfig.act.get())
+                throw new HttpError(567, 'Throttled with ?act=' + config_1.gConfig.act.get());
             let rsp = await fetch(url, { method: 'POST', body });
             log_1.log(rsp.status + ' ' + rsp.statusText);
             if (!rsp.ok) {
@@ -24,7 +24,7 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
             }
         }
         async fetchComments(thash, xorhash) {
-            let host = config_1.gConfig.srv;
+            let host = config_1.gConfig.srv.get();
             let url = host + '/' + thash;
             let ctime = Date.now();
             log_1.log(url);
@@ -51,7 +51,7 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
             return comments;
         }
         async fetchCommentsCount(topics) {
-            let host = config_1.gConfig.srv;
+            let host = config_1.gConfig.srv.get();
             let url = host + '/rpc/GetCommentsCount';
             let body = JSON.stringify(topics);
             log_1.log(url);

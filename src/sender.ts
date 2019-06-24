@@ -49,7 +49,7 @@ class CommentSender {
   private failed: FailedComments = this.lsfailed.json || {};
 
   private pt = new PeriodicTask({
-    interval: gConfig.cri,
+    interval: gConfig.cri.get(),
     randomness: PT_RANDMNESS,
     callback: () => this.tryToSendComments(),
   });
@@ -68,7 +68,8 @@ class CommentSender {
     gComments[hash] = body;
     await this.cacheComment(topic, hash, body);
     this.stageComment(hash, topic);
-    this.tryToSendComment(hash).then();
+    // tslint:disable-next-line:no-floating-promises
+    this.tryToSendComment(hash);
     return { hash, body };
   }
 
@@ -109,7 +110,8 @@ class CommentSender {
     log('Trying to send pending comments:', count);
 
     for (let hash in this.pending)
-      this.tryToSendComment(hash).then();
+      // tslint:disable-next-line:no-floating-promises
+      this.tryToSendComment(hash);
   }
 
   private async tryToSendComment(hash) {

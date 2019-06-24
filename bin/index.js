@@ -18,7 +18,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     $.count = null;
     $.status = null;
     function init() {
-        log_1.log('Query params:', config_1.gConfig);
+        logConfig();
         $.comments = $('#all-comments');
         $.status = $('#status');
         $.topic = $('#topic-url');
@@ -44,6 +44,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         window.onhashchange(null);
     }
     exports.init = init;
+    function logConfig() {
+        let json = {};
+        for (let name in config_1.gConfig)
+            json[name] = config_1.gConfig[name].get();
+        log_1.log.i('Current config:', json);
+    }
     function updateCommentState(chash) {
         log_1.log('Updating comment state:', chash);
         let cdiv = findCommentDivByHash(chash);
@@ -115,7 +121,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         gDraftsTimer = setTimeout(() => {
             gDraftsTimer = 0;
             saveDrafts();
-        }, config_1.gConfig.dut * 1000);
+        }, config_1.gConfig.dut.get() * 1000);
     }
     function saveDrafts() {
         let time = Date.now();
@@ -152,7 +158,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function handleCommentsAreaClick(target) {
         handleCollapseButtonClick(target);
         handleReplyButtonClick(target);
-        handlePostCommentButtonClick(target).then();
+        // tslint:disable-next-line:no-floating-promises
+        handlePostCommentButtonClick(target);
     }
     function handleCollapseButtonClick(target) {
         if (!isCollapseButton(target))

@@ -40,6 +40,7 @@ define(["require", "exports", "./hashutil", "./log", "./storage", "src/db"], fun
                     log_1.log('Uncaching topic:', h);
                     let t = this.topics.get(h);
                     this.topics.delete(h);
+                    // tslint:disable-next-line:no-floating-promises
                     t.remove();
                 }
             }

@@ -11,7 +11,7 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             this.pending = this.lspending.json || {};
             this.failed = this.lsfailed.json || {};
             this.pt = new ptask_1.PeriodicTask({
-                interval: config_1.gConfig.cri,
+                interval: config_1.gConfig.cri.get(),
                 randomness: PT_RANDMNESS,
                 callback: () => this.tryToSendComments(),
             });
@@ -26,7 +26,8 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             cache_1.gComments[hash] = body;
             await this.cacheComment(topic, hash, body);
             this.stageComment(hash, topic);
-            this.tryToSendComment(hash).then();
+            // tslint:disable-next-line:no-floating-promises
+            this.tryToSendComment(hash);
             return { hash, body };
         }
         getCommentState(chash) {
@@ -61,7 +62,8 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
                 return;
             log_1.log('Trying to send pending comments:', count);
             for (let hash in this.pending)
-                this.tryToSendComment(hash).then();
+                // tslint:disable-next-line:no-floating-promises
+                this.tryToSendComment(hash);
         }
         async tryToSendComment(hash) {
             log_1.log('Trying to send comment:', hash);

@@ -29,7 +29,7 @@ $.count = null as HTMLAnchorElement;
 $.status = null as HTMLElement;
 
 export function init() {
-  log('Query params:', gConfig);
+  logConfig();
 
   $.comments = $('#all-comments');
   $.status = $('#status');
@@ -58,6 +58,13 @@ export function init() {
   };
 
   window.onhashchange(null);
+}
+
+function logConfig() {
+  let json = {};
+  for (let name in gConfig)
+    json[name] = gConfig[name].get();
+  log.i('Current config:', json);
 }
 
 function updateCommentState(chash) {
@@ -139,7 +146,7 @@ function handleCommentEdited(target) {
   gDraftsTimer = setTimeout(() => {
     gDraftsTimer = 0;
     saveDrafts();
-  }, gConfig.dut * 1000);
+  }, gConfig.dut.get() * 1000);
 }
 
 function saveDrafts() {
@@ -180,7 +187,8 @@ function loadDrafts() {
 function handleCommentsAreaClick(target) {
   handleCollapseButtonClick(target);
   handleReplyButtonClick(target);
-  handlePostCommentButtonClick(target).then();
+  // tslint:disable-next-line:no-floating-promises
+  handlePostCommentButtonClick(target);
 }
 
 function handleCollapseButtonClick(target) {

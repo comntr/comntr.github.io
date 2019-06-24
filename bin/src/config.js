@@ -1,8 +1,11 @@
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    function getQueryParams(defaults) {
-        let dict = Object.assign({}, defaults);
+    let gQueryParams = null;
+    function getQueryParams() {
+        if (gQueryParams)
+            return gQueryParams;
+        let dict = {};
         let args = location.search.slice(1).split('&');
         for (let arg of args) {
             let i = arg.indexOf('=');
@@ -10,26 +13,67 @@ define(["require", "exports"], function (require, exports) {
                 i = arg.length;
             let name = decodeURIComponent(arg.slice(0, i));
             let value = decodeURIComponent(arg.slice(i + 1));
-            try {
-                dict[name] = JSON.parse(value);
-            }
-            catch (err) {
-                dict[name] = value;
-            }
+            dict[name] = value;
         }
-        return dict;
+        return gQueryParams = dict;
     }
-    function getQueryParam(name) {
-        return exports.gConfig[name];
+    // Reads a JSON property from the URL ?<...> query.
+    function qprop(name, defval) {
+        return {
+            get() {
+                let qp = getQueryParams();
+                let str = qp[name];
+                if (!str)
+                    return defval;
+                try {
+                    return JSON.parse(str);
+                }
+                catch (err) {
+                    return str;
+                }
+            }
+        };
     }
-    exports.getQueryParam = getQueryParam;
-    exports.gConfig = getQueryParams({
-        ext: false,
-        act: 0.0,
-        srv: 'https://comntr.live:42751',
-        cri: 600,
-        dut: 1,
-        sign: true,
-    });
+    // Reads a JSON property from localStorage.
+    function lsprop(name, defval) {
+        return {
+            get() {
+                let str = localStorage.getItem(name);
+                if (!str)
+                    return defval;
+                try {
+                    return JSON.parse(str);
+                }
+                catch (err) {
+                    return str;
+                }
+            }
+        };
+    }
+    // Returns the first non-undefined value.
+    function msprop(props, defval) {
+        return {
+            get() {
+                for (let prop of props) {
+                    let val = prop.get();
+                    if (val !== undefined)
+                        return val;
+                }
+                return defval;
+            }
+        };
+    }
+    exports.gConfig = {
+        ext: qprop('ext', false),
+        // add-comment throttling: 0.99 would throttle 99% of attempts
+        act: qprop('act', 0.0),
+        srv: qprop('srv', 'https://comntr.live:42751'),
+        // interval in seconds between resending comments
+        cri: qprop('cri', 600),
+        // drafts update timeout in seconds
+        dut: qprop('dut', 1),
+        // signs all comments before sending
+        sign: qprop('sign', true),
+    };
 });
 //# sourceMappingURL=config.js.map

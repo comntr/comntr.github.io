@@ -9,12 +9,12 @@ export class HttpError extends Error {
 
 class DataServer {
   async postComment(topicId, { hash, body }) {
-    let host = gConfig.srv;
+    let host = gConfig.srv.get();
     let url = host + '/' + topicId + '/' + hash;
     log('POST ' + url + '\n' + body);
 
-    if (gConfig.act > 0 && Math.random() < gConfig.act)
-      throw new HttpError(567, 'Throttled with ?act=' + gConfig.act);
+    if (gConfig.act.get() > 0 && Math.random() < gConfig.act.get())
+      throw new HttpError(567, 'Throttled with ?act=' + gConfig.act.get());
 
     let rsp = await fetch(url, { method: 'POST', body });
     log(rsp.status + ' ' + rsp.statusText);
@@ -26,7 +26,7 @@ class DataServer {
   }
 
   async fetchComments(thash, xorhash) {
-    let host = gConfig.srv;
+    let host = gConfig.srv.get();
     let url = host + '/' + thash;
     let ctime = Date.now();
     log(url);
@@ -56,7 +56,7 @@ class DataServer {
   }
 
   async fetchCommentsCount(topics) {
-    let host = gConfig.srv;
+    let host = gConfig.srv.get();
     let url = host + '/rpc/GetCommentsCount';
     let body = JSON.stringify(topics);
     log(url);
