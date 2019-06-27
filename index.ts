@@ -476,6 +476,9 @@ function makeCommentHtml({
   hash = null,
   subc = '' }) {
 
+  let html = text.replace(/([<>])/gm,
+    (_, ch) => '&#' + ch.charCodeAt(0) + ';');
+
   return `
     <div class="cm" ${hash ? `id="cm-${hash}"` : ``}>
       <div class="hd">
@@ -485,7 +488,7 @@ function makeCommentHtml({
         ${!text ? `<span class="post">Send</span>` : ``}
         ${subc ? `<span class="c">Collapse</span>` : ``}
       </div>
-      <div class="ct" ${!text ? `contenteditable` : ``}>${text}</div>
+      <div class="ct" ${!text ? `contenteditable` : ``}>${html}</div>
       ${subc ? `<div class="sub">${subc}</div>` : ``}
     </div>`;
 }
