@@ -1,0 +1,118 @@
+body {
+    background: #2b2b2b;
+    margin: 1em;
+}
+.github-corner > svg {
+    color: #000 !important;
+    fill: #ff9000 !important;
+}
+#comments-count {
+    color: #ff9000;
+    font-weight: bold;
+}
+#info-bar {
+    color: #e1e1e1;
+}
+#pii-notice {
+    background: #ff9000;
+    width: max-content;
+    margin: unset;  /* tmp */
+    margin-top: 1em;
+    font-weight: bold;
+    padding: 1em;
+}
+#topic-url,
+#config-url {
+    color: #888;
+}
+
+/*
+ * comments
+ */
+.hd .r {
+    color: #ff9000;
+    text-decoration: none !important;
+}
+.hd .c {
+    color: #47e33c;
+    text-decoration: none;
+}
+.ct {
+    color: #e1e1e1;
+}
+.cm {
+    margin: 1em 0;
+}
+.cm.draft {
+    background: #3178b4;
+    min-width: 300px;
+    padding: 10px;
+    max-width: 500px;
+}
+.cm.draft .u {
+    color: white;
+    padding: 5px 10px;
+    background: #286291;
+}
+.cm.draft .ct {
+    background: #4d4d4d;
+    border: 3px solid #ff9000;
+    ;
+    padding: 10px;
+    margin-top: 24px;
+    min-height: 1.4em;
+    line-height: 1.4em;
+}
+.cm > .hd {
+    color: #888;
+    font-size: 0.7em;
+    user-select: none;
+}
+.cm > .hd > * {
+    margin-right: 5pt;
+}
+.cm > .hd > .post {
+    color: #000;
+    font-weight: bold;
+    background: #84c7ff;
+    padding: 5px 10px;
+    border-radius: 18px;
+    border: 3px solid #ff9000;
+    text-decoration: none;
+    float: right;
+}
+.cm > .hd > .st[state="failed"] {
+    color: #f00;
+    background: #ff0;
+}
+
+.cm > .hd > .st[state="sent"] {
+    color: #0f0;
+}
+
+.cm > .hd > .r,
+.c,
+.post {
+    text-decoration: underline;
+    cursor: pointer;
+}
+.cm > .ct {
+    word-break: break-word;
+    word-wrap: break-word;
+}
+.cm > .ct:empty:not(:focus) {
+    cursor: text;
+}
+.cm > .ct:empty:not(:focus)::before {
+    content: 'Your comment...';
+    color: #888;
+}
+.cm > .ct:focus {
+    outline: none;
+    background: none;
+}
+.cm > .sub {
+    border-left: 2px dashed #a95f00;
+    padding-left: 10px;
+    margin-left: 1em;
+}
