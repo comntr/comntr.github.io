@@ -255,11 +255,10 @@ async function renderComments() {
 
   document.title = 'Comntr - ' + topicId;
 
-  if (URL_PATTERN.test(topicId)) {
+  if (URL_PATTERN.test(topicId) && !gConfig.ext.get()) {
     let a = $.topic.querySelector('a');
     if (a) a.href = topicId;
   } else {
-    log.i(`The topic id doesn't look like a URL, so hiding the URL link.`);
     $.topic.style.display = 'none';
   }
 

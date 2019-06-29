@@ -217,13 +217,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!topicId)
             throw new Error('topic id is null');
         document.title = 'Comntr - ' + topicId;
-        if (URL_PATTERN.test(topicId)) {
+        if (URL_PATTERN.test(topicId) && !config_1.gConfig.ext.get()) {
             let a = $.topic.querySelector('a');
             if (a)
                 a.href = topicId;
         }
         else {
-            log_1.log.i(`The topic id doesn't look like a URL, so hiding the URL link.`);
             $.topic.style.display = 'none';
         }
         if (!SHA1_PATTERN.test(topicId)) {
