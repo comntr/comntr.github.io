@@ -16,6 +16,10 @@ body.mobile {
   margin: 1em;
 }
 
+#comments-count {
+  color: #888;
+}
+
 #dmode-url > u {
   cursor: pointer;
 }

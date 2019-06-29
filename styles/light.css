@@ -3,7 +3,8 @@
   background: #ff0;
 }
 
-#controls {
+#controls,
+#controls a {
   color: #888;
 }
 

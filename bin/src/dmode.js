@@ -4,8 +4,8 @@ define(["require", "exports", "src/config", "src/log"], function (require, expor
     Object.defineProperty(exports, "__esModule", { value: true });
     const SEL_LINK = '#dm-style';
     const SEL_BUTTON = '#dmode-url > u';
-    const TEXT_WHEN_DARK = 'Light Mode';
-    const TEXT_WHEN_LIGHT = 'Dark Mode';
+    const TEXT_WHEN_DARK = 'Light';
+    const TEXT_WHEN_LIGHT = 'Dark';
     const CSS_DARK = 'styles/dark.css';
     const CSS_LIGHT = 'styles/light.css';
     function init() {

@@ -254,6 +254,7 @@ async function renderComments() {
   if (!topicId) throw new Error('topic id is null');
 
   document.title = 'Comntr - ' + topicId;
+  $.count.href = location.origin + '#' + topicId;
 
   if (URL_PATTERN.test(topicId) && !gConfig.ext.get()) {
     let a = $.topic.querySelector('a');
