@@ -6,7 +6,8 @@ import { gDataServer } from 'src/dataserver';
 import { gSender } from 'src/sender';
 import { sha1 } from 'src/hashutil';
 import { gStorage } from 'src/storage';
-import { gUser } from './src/user';
+import { gUser } from 'src/user';
+import * as dmode from 'src/dmode';
 
 const LS_DRAFTS_KEY = 'sys.drafts';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
@@ -39,6 +40,8 @@ export function init() {
 
   if (gConfig.ext)
     log('Launched as the extension popup.');
+
+  dmode.init(); // Switch to the dark mode, if necessary.
 
   $.comments.onclick = event => handleCommentsAreaClick(event.target);
   $.comments.oninput = event => handleCommentEdited(event.target);

@@ -16,6 +16,7 @@ function getQueryParams() {
 
 interface Prop<T> {
   get(): T;
+  set(value: T): void;
 }
 
 // Reads a JSON property from the URL ?<...> query.
@@ -31,7 +32,10 @@ function qprop<T>(name: string, defval?: T): Prop<T> {
       } catch (err) {
         return str;
       }
-    }
+    },
+    set() {
+      // noop
+    },
   };
 }
 
@@ -54,7 +58,17 @@ function lsprop<T>(name: string, defval?: T): Prop<T> {
       } catch (err) {
         return str;
       }
-    }
+    },
+    set(value) {
+      if (value === undefined) {
+        localStorage.removeItem(name);
+      } else if (typeof value === 'string') {
+        localStorage.setItem(name, value);
+      } else {
+        let json = JSON.stringify(value);
+        localStorage.setItem(name, json);
+      }
+    },
   };
 }
 
@@ -68,7 +82,11 @@ function msprop<T>(props: Prop<T>[], defval?: T): Prop<T> {
           return val;
       }
       return defval;
-    }
+    },
+    set(value) {
+      for (let prop of props)
+        prop.set(value);
+    },
   };
 }
 
@@ -122,5 +140,10 @@ export const gConfig = {
   lrucap: msprop<number>([
     qprop('lrucap'),
     lsprop('user.cache.maxurls', 100),
+  ]),
+
+  dmode: msprop<boolean>([
+    qprop('dm'),
+    lsprop('user.ui.mode.dark', false),
   ]),
 };

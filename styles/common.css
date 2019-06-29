@@ -9,15 +9,14 @@ body.mobile {
 }
 
 #pii-notice {
-  background: #ff0;
-  border: 2px solid #f80;
+  border: 2px solid #000;
   font-weight: bold;
   padding: 1em;
   margin: 1em;
 }
 
-#topic-url, #config-url {
-  color: #888;
+#dmode-url > u {
+  cursor: pointer;
 }
 
 .cm {
@@ -34,20 +33,13 @@ body.mobile {
 
 .cm > .ct:empty:not(:focus)::before {
   content: 'Your comment...';
-  color: #888;
 }
 
 .cm > .ct:focus {
   outline: none;
-  background: none;
-}
-
-.cm.draft {
-  background: #ff8;
 }
 
 .cm > .hd {
-  color: #888;
   font-size: 0.7em;
   user-select: none;
 }
@@ -56,26 +48,15 @@ body.mobile {
   margin-right: 5pt;
 }
 
-.cm > .hd > .st[state="failed"] {
-  color: #f00;
-  background: #ff0;
-}
-
-.cm > .hd > .st[state="sent"] {
-  color: #0f0;
-}
-
 .cm > .hd > .r, .c, .post {
   text-decoration: underline;
   cursor: pointer;
 }
 
 .cm > .hd > .post {
-  color: #000;
-  background: #ff0;
   font-weight: bold;
 }
 
 .cm > .sub {
-  margin-left: 1em;
+  padding-left: 1em;
 }

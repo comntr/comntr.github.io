@@ -3,7 +3,8 @@
 
 <head>
   <title>Comntr</title>
-  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="styles/common.css">
+  <link rel="stylesheet" href="styles/light.css" id="dm-style">
   <script src="/src/css-mobile.js"></script>
   <script src="/require.js"></script>
 </head>
@@ -11,8 +12,11 @@
 <body>
   <div id="info-bar">
     <span id="comments-count">Fetching comments...</span>
-    <span id="topic-url"> [ <a target="_blank" rel="noopener noreferrer">URL</a> ] </span>
-    <span id="config-url"> [ <a target="_blank" href="/config#user.">Config</a> ] </span>
+    <span id="controls">
+      <span id="topic-url"> [ <a target="_blank" rel="noopener noreferrer">URL</a> ] </span>
+      <span id="config-url"> [ <a target="_blank" href="/config#user.">Config</a> ] </span>
+      <span id="dmode-url"> [ <u>Dark Mode</u> ] </span>
+    </span>
   </div>
 
   <div id="status"></div>

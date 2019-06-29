@@ -1,4 +1,4 @@
-define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage", "./src/user"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1, user_1) {
+define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage", "src/user", "src/dmode"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1, user_1, dmode) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const LS_DRAFTS_KEY = 'sys.drafts';
@@ -26,6 +26,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         $.count = $('#comments-count');
         if (config_1.gConfig.ext)
             log_1.log('Launched as the extension popup.');
+        dmode.init(); // Switch to the dark mode, if necessary.
         $.comments.onclick = event => handleCommentsAreaClick(event.target);
         $.comments.oninput = event => handleCommentEdited(event.target);
         sender_1.gSender.commentStateChanged.addListener(e => {

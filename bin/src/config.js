@@ -31,7 +31,10 @@ define(["require", "exports"], function (require, exports) {
                 catch (err) {
                     return str;
                 }
-            }
+            },
+            set() {
+                // noop
+            },
         };
     }
     // Reads a JSON property from localStorage.
@@ -53,7 +56,19 @@ define(["require", "exports"], function (require, exports) {
                 catch (err) {
                     return str;
                 }
-            }
+            },
+            set(value) {
+                if (value === undefined) {
+                    localStorage.removeItem(name);
+                }
+                else if (typeof value === 'string') {
+                    localStorage.setItem(name, value);
+                }
+                else {
+                    let json = JSON.stringify(value);
+                    localStorage.setItem(name, json);
+                }
+            },
         };
     }
     // Returns the first non-undefined value.
@@ -66,7 +81,11 @@ define(["require", "exports"], function (require, exports) {
                         return val;
                 }
                 return defval;
-            }
+            },
+            set(value) {
+                for (let prop of props)
+                    prop.set(value);
+            },
         };
     }
     exports.gConfig = {
@@ -110,6 +129,10 @@ define(["require", "exports"], function (require, exports) {
         lrucap: msprop([
             qprop('lrucap'),
             lsprop('user.cache.maxurls', 100),
+        ]),
+        dmode: msprop([
+            qprop('dm'),
+            lsprop('user.ui.mode.dark', false),
         ]),
     };
 });
