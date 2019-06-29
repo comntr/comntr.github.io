@@ -53,7 +53,7 @@ class LRUCache {
         let t = this.topics.get(h);
         this.topics.delete(h);
         // tslint:disable-next-line:no-floating-promises
-        t.remove();
+        t && t.remove();
       }
     }
 

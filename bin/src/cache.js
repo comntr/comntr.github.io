@@ -40,7 +40,7 @@ define(["require", "exports", "src/hashutil", "src/log", "src/storage", "src/db"
                     let t = this.topics.get(h);
                     this.topics.delete(h);
                     // tslint:disable-next-line:no-floating-promises
-                    t.remove();
+                    t && t.remove();
                 }
             }
             let list = this.thashes.join(LRU_CACHE_TOPICS_SEP);
