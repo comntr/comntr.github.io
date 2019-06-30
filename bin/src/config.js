@@ -134,6 +134,10 @@ define(["require", "exports"], function (require, exports) {
             qprop('dm'),
             lsprop('user.ui.mode.dark', false),
         ]),
+        dqps: msprop([
+            qprop('qs'),
+            lsprop('stats.ui.step.qps', 0.25),
+        ]),
     };
 });
 //# sourceMappingURL=config.js.map

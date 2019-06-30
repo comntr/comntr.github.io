@@ -146,4 +146,9 @@ export const gConfig = {
     qprop('dm'),
     lsprop('user.ui.mode.dark', false),
   ]),
+
+  dqps: msprop<number>([
+    qprop('qs'),
+    lsprop('stats.ui.step.qps', 0.25),
+  ]),
 };
