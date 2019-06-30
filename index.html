@@ -28,6 +28,10 @@
 
   <script>
     window.onload = () => {
+      if (!location.hash.slice(1)) {
+        location.pathname = '/about';
+        return;
+      }
       requirejs.config({
         baseUrl: '/bin'
       });
