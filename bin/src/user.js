@@ -114,6 +114,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
     exports.gUser = {
         signComment,
         verifyComment,
+        getUserKeys,
         username: new UserNameProp,
     };
 });

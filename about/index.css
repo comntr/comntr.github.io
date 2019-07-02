@@ -23,6 +23,21 @@ body {
 
 #left > p {
   width: 75%;
+  margin: 0.5em;
+}
+
+#filter-id,
+#public-key {
+  word-break: break-all;
+  color: #080;
+}
+
+#example {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.75em;
+  color: #004;
+  border: 1px solid #ccc;
 }
 
 #right {

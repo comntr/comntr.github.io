@@ -1,4 +1,4 @@
-export function hs2a(hs: string) {
+export function hs2a(hs: string): Uint8Array {
   let a = new Uint8Array(hs.length / 2);
   for (let i = 0; i < a.length; i++) {
     let si = hs.slice(i * 2, i * 2 + 2);
@@ -11,7 +11,7 @@ export function hd2s(x: number) {
   return (0x100 + x).toString(16).slice(1);
 }
 
-export function a2hs(a: Uint8Array) {
+export function a2hs(a: Uint8Array): string {
   return [...a].map(hd2s).join('');
 }
 

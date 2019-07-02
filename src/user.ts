@@ -139,5 +139,6 @@ class UserNameProp {
 export const gUser = {
   signComment,
   verifyComment,
+  getUserKeys,
   username: new UserNameProp,
 };
