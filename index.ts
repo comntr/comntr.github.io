@@ -268,7 +268,7 @@ async function handleBlockButtonClick(target) {
   let ct: HTMLElement = draft.querySelector('.ct');
   ct.textContent = [
     'Block-User: ' + userid.slice(0, N_USERID_CHARS),
-    'Reason: N/A',
+    'Reason: Just Cause',
   ].join('\n');
 }
 
