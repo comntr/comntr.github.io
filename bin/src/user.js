@@ -111,10 +111,22 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
             log_1.log.i('Updated username:', name);
         }
     }
+    async function deriveFilterId(tag) {
+        let keys = await getUserKeys();
+        return await hashutil_1.sha1([
+            await hashutil_1.sha1(hashutil_1.a2hs(keys.publicKey)),
+            await hashutil_1.sha1(tag),
+        ].join(''));
+    }
+    async function getPublicKey() {
+        let keys = await getUserKeys();
+        return hashutil_1.a2hs(keys.publicKey);
+    }
     exports.gUser = {
         signComment,
         verifyComment,
-        getUserKeys,
+        deriveFilterId,
+        getPublicKey,
         username: new UserNameProp,
     };
 });

@@ -1,5 +1,5 @@
 import { gStorage } from 'src/storage';
-import { hs2a, a2hs } from 'src/hashutil';
+import { sha1, hs2a, a2hs } from 'src/hashutil';
 import { log } from 'src/log';
 import { gConfig } from './config';
 
@@ -136,9 +136,23 @@ class UserNameProp {
   }
 }
 
+async function deriveFilterId(tag: string): Promise<string> {
+  let keys = await getUserKeys();
+  return await sha1([
+    await sha1(a2hs(keys.publicKey)),
+    await sha1(tag),
+  ].join(''));
+}
+
+async function getPublicKey(): Promise<string> {
+  let keys = await getUserKeys();
+  return a2hs(keys.publicKey);
+}
+
 export const gUser = {
   signComment,
   verifyComment,
-  getUserKeys,
+  deriveFilterId,
+  getPublicKey,
   username: new UserNameProp,
 };

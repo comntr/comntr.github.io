@@ -1,24 +1,21 @@
-import { tagged } from 'src/log';
+import * as logger from 'src/log';
 import { gUser } from 'src/user';
-import { sha1, a2hs } from 'src/hashutil';
+import { a2hs } from 'src/hashutil';
 
 const ID_EXAMPLE = '#example';
-const ID_FILTER = '#filter-id';
+const ID_FILTER_TAG = '#filter-tag';
 const ID_PUBLIC_KEY = '#public-key';
 
 const $ = (sel: string): HTMLElement => document.querySelector(sel);
-const log = tagged('about');
+const log = logger.tagged('about');
 
 export async function init() {
   log.i('init()');
-  let keys = await gUser.getUserKeys();
-  let roomId = 'MyFirstFilter';
-  let filterId = await sha1([
-    await sha1(a2hs(keys.publicKey)),
-    await sha1(roomId),
-  ].join(''));
+  let publicKey = await gUser.getPublicKey();
+  let filterTag = 'FooBar';
+  let filterId = await gUser.deriveFilterId(filterTag);
   let url = 'https://comntr.github.io'
-    + `?room=${roomId}&filter=${filterId}`;
+    + `?tag=${filterTag}&filter=${filterId}`;
 
   $(ID_EXAMPLE).textContent = `
 <iframe id="comntr"
@@ -30,6 +27,6 @@ export async function init() {
 </script>
 `.trim();
 
-  $(ID_FILTER).textContent = roomId;
-  $(ID_PUBLIC_KEY).textContent = a2hs(keys.publicKey);
+  $(ID_FILTER_TAG).textContent = filterTag;
+  $(ID_PUBLIC_KEY).textContent = publicKey;
 }

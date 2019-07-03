@@ -19,7 +19,7 @@
       comments to your website:</p>
     <p id="example">Loading...</p>
     <p>Your Filter Id:
-      <span id="filter-id" title="This can be any string. No problem if someone else chooses the same string. Comntr computes a hash of this string and mixes it with your public key."></span>
+      <span id="filter-tag" title="This can be any string. No problem if someone else chooses the same string. Comntr computes a hash of this string and mixes it with your public key."></span>
     </p>
     <p>Your Public Key:
       <span id="public-key" title="This key allows to edit the filter. It's stored in localStorage. If you lose it, you won't be able to edit the filter, but you can always copy that filter to a new one and change the filter id on your page."></span></p>
@@ -36,7 +36,7 @@
     </iframe>
     <script>
       document.querySelector('#comntr').src =
-        'https://comntr.github.io?room=MyFirstFilter&filter=5962811cd2b526b6070a762ece74d03207841d43' + '#' + location.host;
+        'https://comntr.github.io?tag=MyFirstFilter&filter=5962811cd2b526b6070a762ece74d03207841d43' + '#' + location.host;
     </script>
   </div>
 </body>

@@ -26,7 +26,7 @@ body {
   margin: 0.5em;
 }
 
-#filter-id,
+#filter-tag,
 #public-key {
   word-break: break-all;
   color: #080;
