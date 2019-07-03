@@ -33,7 +33,11 @@ body {
 }
 
 .hd .c {
-    color: #47e33c;
+    color: #888;
+}
+
+.hd .post {
+  color: #47e33c;
 }
 
 .ct {
@@ -41,7 +45,11 @@ body {
 }
 
 .cm.draft {
-    background: #3178b4;
+  
+}
+
+.cm.block {
+  outline: 1px dashed red;
 }
 
 .cm.draft .u {
@@ -50,18 +58,11 @@ body {
 }
 
 .cm.draft .ct {
-    background: #4d4d4d;
-    border-color: #ff9000;
+
 }
 
 .cm > .hd {
-    color: #888;
-}
-
-.cm > .hd > .post {
-    color: #000;
-    background: #84c7ff;
-    border-color: #ff9000;
+  color: #888;
 }
 
 .cm > .hd > .st[state="failed"] {

@@ -30,13 +30,14 @@ body.mobile {
 
 .cm > .ct {
   word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .cm > .ct:empty:not(:focus) {
   cursor: text;
 }
 
-.cm > .ct:empty:not(:focus)::before {
+.cm.draft > .ct:empty:not(:focus)::before {
   content: 'Your comment...';
 }
 

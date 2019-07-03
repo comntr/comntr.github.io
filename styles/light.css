@@ -16,6 +16,10 @@
   background: #ff8;
 }
 
+.cm.block {
+  background: #fee;
+}
+
 .cm > .hd {
   color: #888;
 }
@@ -31,5 +35,4 @@
 
 .cm > .hd > .post {
   color: #000;
-  background: #ff0;
 }

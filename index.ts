@@ -9,7 +9,9 @@ import { gStorage } from 'src/storage';
 import { gUser } from 'src/user';
 import * as dmode from 'src/dmode';
 
+const N_USERID_CHARS = 7;
 const CSS_CLASS_ADMIN = 'admin'; // <body>
+const CSS_CLASS_BLOCK = 'block'; // .cm.draft
 const LS_DRAFTS_KEY = 'sys.drafts';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -21,7 +23,7 @@ const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 let log = tagged('ui').tagged('main');
 let gURL = null;
 let gTopic = null; // SHA1
-let gComments = null; // sha1 -> data
+let gComments: { [chash: string]: string } = null; // sha1 -> data
 let gDrafts = gStorage.getEntry(LS_DRAFTS_KEY);
 let gDraftsTimer = 0;
 let gIsAdmin = false;
@@ -41,7 +43,7 @@ export function init() {
   $.topic = $('#topic-url');
   $.count = $('#comments-count') as HTMLAnchorElement;
 
-  if (gConfig.ext)
+  if (gConfig.ext.get())
     log.i('Launched as the extension popup.');
 
   dmode.init(); // Switch to the dark mode, if necessary.
@@ -57,7 +59,7 @@ export function init() {
   window.onhashchange = async () => {
     try {
       await resetComments();
-      await loadAdminControls();
+      await initAdminMode();
       await renderComments();
       await loadDrafts();
     } catch (err) {
@@ -68,7 +70,7 @@ export function init() {
   window.onhashchange(null);
 }
 
-async function loadAdminControls() {
+async function initAdminMode() {
   gIsAdmin = false;
 
   let filterId = gConfig.filterId.get();
@@ -158,6 +160,10 @@ function isReplyButton(x) {
   return x && x.className == 'r';
 }
 
+function isBlockButton(x) {
+  return x && x.className == 'ban';
+}
+
 function isPostButton(x) {
   return x && x.className == 'post';
 }
@@ -230,6 +236,7 @@ function loadDrafts() {
 function handleCommentsAreaClick(target) {
   handleCollapseButtonClick(target);
   handleReplyButtonClick(target);
+  handleBlockButtonClick(target);
   // tslint:disable-next-line:no-floating-promises
   handlePostCommentButtonClick(target);
 }
@@ -247,11 +254,38 @@ function handleCollapseButtonClick(target) {
   }
 }
 
+async function handleBlockButtonClick(target) {
+  if (!isBlockButton(target)) return;
+  let comm = findCommentContainer(target);
+  let chash = getCommentId(comm);
+  let userid = await getCommentAuthorId(chash);
+  if (!userid) {
+    log.w('No user id found for comment', chash);
+    return;
+  }
+  let draft = setCommentDraftFor(chash);
+  draft.classList.add(CSS_CLASS_BLOCK);
+  let ct: HTMLElement = draft.querySelector('.ct');
+  ct.textContent = [
+    'Block-User: ' + userid.slice(0, N_USERID_CHARS),
+    'Reason: N/A',
+  ].join('\n');
+}
+
+async function getCommentAuthorId(chash: string): Promise<string> {
+  let cdata = gComments[chash];
+  let match = cdata && /^Public-Key: (\w+)$/m.exec(cdata);
+  let pubkey = match && match[1];
+  let userid = pubkey && await sha1(pubkey);
+  return userid;
+}
+
 function handleReplyButtonClick(target) {
   if (!isReplyButton(target)) return;
   let comm = findCommentContainer(target);
   let chash = getCommentId(comm);
   let draft = setCommentDraftFor(chash);
+  draft.classList.remove(CSS_CLASS_BLOCK);
   let ct: HTMLElement = draft.querySelector('.ct');
   ct.focus();
 }
@@ -528,7 +562,7 @@ function makeCommentHtml({
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
         ${text ? `<span class="r">Reply</span>` : `<span class="post">Send</span>`}
         ${subc ? `<span class="c">Collapse</span>` : ``}
-        ${gIsAdmin ? `<span class="ban">Block</span>` : ``}
+        ${gIsAdmin && text ? `<span class="ban">Block</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${html}</div>
       ${subc ? `<div class="sub">${subc}</div>` : ``}

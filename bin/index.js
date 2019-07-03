@@ -1,7 +1,9 @@
 define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage", "src/user", "src/dmode"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1, user_1, dmode) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    const N_USERID_CHARS = 7;
     const CSS_CLASS_ADMIN = 'admin'; // <body>
+    const CSS_CLASS_BLOCK = 'block'; // .cm.draft
     const LS_DRAFTS_KEY = 'sys.drafts';
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
     const URL_PATTERN = /^https?:\/\//;
@@ -27,7 +29,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         $.status = $('#status');
         $.topic = $('#topic-url');
         $.count = $('#comments-count');
-        if (config_1.gConfig.ext)
+        if (config_1.gConfig.ext.get())
             log.i('Launched as the extension popup.');
         dmode.init(); // Switch to the dark mode, if necessary.
         $.comments.onclick = event => handleCommentsAreaClick(event.target);
@@ -39,7 +41,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         window.onhashchange = async () => {
             try {
                 await resetComments();
-                await loadAdminControls();
+                await initAdminMode();
                 await renderComments();
                 await loadDrafts();
             }
@@ -50,7 +52,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         window.onhashchange(null);
     }
     exports.init = init;
-    async function loadAdminControls() {
+    async function initAdminMode() {
         gIsAdmin = false;
         let filterId = config_1.gConfig.filterId.get();
         let filterTag = config_1.gConfig.filterTag.get();
@@ -127,6 +129,9 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function isReplyButton(x) {
         return x && x.className == 'r';
     }
+    function isBlockButton(x) {
+        return x && x.className == 'ban';
+    }
     function isPostButton(x) {
         return x && x.className == 'post';
     }
@@ -191,6 +196,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     function handleCommentsAreaClick(target) {
         handleCollapseButtonClick(target);
         handleReplyButtonClick(target);
+        handleBlockButtonClick(target);
         // tslint:disable-next-line:no-floating-promises
         handlePostCommentButtonClick(target);
     }
@@ -207,12 +213,38 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 n < 2 ? 'Expand' : `Expand (${n} comments)`;
         }
     }
+    async function handleBlockButtonClick(target) {
+        if (!isBlockButton(target))
+            return;
+        let comm = findCommentContainer(target);
+        let chash = getCommentId(comm);
+        let userid = await getCommentAuthorId(chash);
+        if (!userid) {
+            log.w('No user id found for comment', chash);
+            return;
+        }
+        let draft = setCommentDraftFor(chash);
+        draft.classList.add(CSS_CLASS_BLOCK);
+        let ct = draft.querySelector('.ct');
+        ct.textContent = [
+            'Block-User: ' + userid.slice(0, N_USERID_CHARS),
+            'Reason: N/A',
+        ].join('\n');
+    }
+    async function getCommentAuthorId(chash) {
+        let cdata = gComments[chash];
+        let match = cdata && /^Public-Key: (\w+)$/m.exec(cdata);
+        let pubkey = match && match[1];
+        let userid = pubkey && await hashutil_1.sha1(pubkey);
+        return userid;
+    }
     function handleReplyButtonClick(target) {
         if (!isReplyButton(target))
             return;
         let comm = findCommentContainer(target);
         let chash = getCommentId(comm);
         let draft = setCommentDraftFor(chash);
+        draft.classList.remove(CSS_CLASS_BLOCK);
         let ct = draft.querySelector('.ct');
         ct.focus();
     }
@@ -437,7 +469,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
         ${text ? `<span class="r">Reply</span>` : `<span class="post">Send</span>`}
         ${subc ? `<span class="c">Collapse</span>` : ``}
-        ${gIsAdmin ? `<span class="ban">Block</span>` : ``}
+        ${gIsAdmin && text ? `<span class="ban">Block</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${html}</div>
       ${subc ? `<div class="sub">${subc}</div>` : ``}
