@@ -1,6 +1,7 @@
 define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cache", "src/dataserver", "src/sender", "src/hashutil", "src/storage", "src/user", "src/dmode"], function (require, exports, log_1, config_1, watchlist_1, cache_1, dataserver_1, sender_1, hashutil_1, storage_1, user_1, dmode) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    const CSS_CLASS_ADMIN = 'admin'; // <body>
     const LS_DRAFTS_KEY = 'sys.drafts';
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
     const URL_PATTERN = /^https?:\/\//;
@@ -8,11 +9,13 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     const COMMENT_USERNAME_PATTERN = /^User: (.+)$/m;
     const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
     const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
+    let log = log_1.tagged('ui').tagged('main');
     let gURL = null;
     let gTopic = null; // SHA1
     let gComments = null; // sha1 -> data
     let gDrafts = storage_1.gStorage.getEntry(LS_DRAFTS_KEY);
     let gDraftsTimer = 0;
+    let gIsAdmin = false;
     const $ = (selector) => document.querySelector(selector);
     $.comments = null;
     $.topic = null;
@@ -25,7 +28,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         $.topic = $('#topic-url');
         $.count = $('#comments-count');
         if (config_1.gConfig.ext)
-            log_1.log('Launched as the extension popup.');
+            log.i('Launched as the extension popup.');
         dmode.init(); // Switch to the dark mode, if necessary.
         $.comments.onclick = event => handleCommentsAreaClick(event.target);
         $.comments.oninput = event => handleCommentEdited(event.target);
@@ -36,6 +39,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         window.onhashchange = async () => {
             try {
                 await resetComments();
+                await loadAdminControls();
                 await renderComments();
                 await loadDrafts();
             }
@@ -46,14 +50,41 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         window.onhashchange(null);
     }
     exports.init = init;
+    async function loadAdminControls() {
+        gIsAdmin = false;
+        let filterId = config_1.gConfig.filterId.get();
+        let filterTag = config_1.gConfig.filterTag.get();
+        if (!filterId)
+            return;
+        log.i('There is a ?filter=<...> set for this page');
+        log.i('Filter id:', filterId);
+        log.i('Filter tag:', filterTag);
+        if (!filterTag) {
+            log.w('?filter=<...> must come together with ?tag=<...>');
+            return;
+        }
+        if (!user_1.gUser.hasUserKeys()) {
+            log.i(`The user doesn't have ed25519 keys and thus can't be the admin.`);
+            return;
+        }
+        let adminFilterId = await user_1.gUser.deriveFilterId(filterTag);
+        if (adminFilterId == filterId)
+            gIsAdmin = true;
+        document.body.classList.toggle(CSS_CLASS_ADMIN, gIsAdmin);
+        log.i('Admin?', gIsAdmin);
+        if (!gIsAdmin) {
+            log.i('If this user was the admin, the filter id would be', adminFilterId);
+            return;
+        }
+    }
     function logConfig() {
         let json = {};
         for (let name in config_1.gConfig)
             json[name] = config_1.gConfig[name].get();
-        log_1.log.i('Current config:', json);
+        log.i('Current config:', json);
     }
     function updateCommentState(chash) {
-        log_1.log('Updating comment state:', chash);
+        log.i('Updating comment state:', chash);
         let cdiv = findCommentDivByHash(chash);
         if (!cdiv)
             return;
@@ -82,7 +113,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         $.count.textContent = Object.keys(gComments).length + ' comments';
     }
     function resetComments() {
-        log_1.log('Resetting comments.');
+        log.i('Resetting comments.');
         $.status.textContent = '';
         $.comments.innerHTML = '';
         $.count.textContent = 'Fetching comments...';
@@ -147,7 +178,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         });
         if (updates > 0) {
             gDrafts.json = drafts;
-            log_1.log(`${updates} drafts updated in ${Date.now() - time} ms`);
+            log.i(`${updates} drafts updated in ${Date.now() - time} ms`);
         }
     }
     function loadDrafts() {
@@ -213,7 +244,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     }
     async function renderComments() {
         let topicId = location.hash.slice(1);
-        log_1.log('Rendering comments for topic:', topicId);
+        log.i('Rendering comments for topic:', topicId);
         if (!topicId)
             throw new Error('topic id is null');
         document.title = 'Comntr - ' + topicId;
@@ -229,7 +260,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!SHA1_PATTERN.test(topicId)) {
             gURL = topicId;
             topicId = await hashutil_1.sha1(topicId);
-            log_1.log('sha1(topic):', topicId);
+            log.i('sha1(topic):', topicId);
         }
         gTopic = topicId;
         await getComments(topicId);
@@ -246,7 +277,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!await watchlist_1.gWatchlist.isWatched(gTopic))
             return;
         let size = Object.keys(gComments || {}).length;
-        log_1.log(`Marking all ${size} comments as read.`);
+        log.i(`Marking all ${size} comments as read.`);
         await watchlist_1.gWatchlist.setSize(gTopic, size);
     }
     async function handlePostCommentButtonClick(buttonAdd) {
@@ -258,7 +289,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
         let text = divInput.textContent.trim();
         let phash = divParent ? divParent.id.slice(3) : gTopic;
-        log_1.log('Replying to', phash, 'with', text);
+        log.i('Replying to', phash, 'with', text);
         try {
             if (!text)
                 throw new Error('Cannot send an empty comment.');
@@ -291,12 +322,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return element;
     }
     async function runAsyncStep(label, fn) {
-        log_1.log.i('Started:', label);
+        log.i('Started:', label);
         let time = Date.now();
         let res = await fn();
         let diff = Date.now() - time;
         if (diff > 10)
-            log_1.log.w('Done:', label, diff, 'ms');
+            log.w('Done:', label, diff, 'ms');
         return res;
     }
     async function getComments(thash = gTopic) {
@@ -305,13 +336,13 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         try {
             let tcache = cache_1.gCache.getTopic(thash);
             let xorhash = await tcache.getXorHash();
-            log_1.log('Cached xorhash:', xorhash);
+            log.i('Cached xorhash:', xorhash);
             let rcdata = await runAsyncStep('Fetching comments.', async () => {
                 try {
                     return await dataserver_1.gDataServer.fetchComments(thash, xorhash);
                 }
                 catch (err) {
-                    log_1.log.e('Failed to get comments:', err);
+                    log.e('Failed to get comments:', err);
                     $.status.textContent = 'Failed to download comments: ' + err;
                     return [];
                 }
@@ -348,7 +379,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                         byhash[parsed.hash] = parsed;
                     }
                     catch (error) {
-                        log_1.log.e('Bad comment:', error);
+                        log.e('Bad comment:', error);
                     }
                 }
             });
@@ -374,7 +405,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             });
         }
         catch (err) {
-            log_1.log.e(err);
+            log.e(err);
             $.status.textContent = err;
         }
     }
@@ -404,9 +435,9 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
       <div class="hd">
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
-        ${text ? `<span class="r">Reply</span>` : ``}
-        ${!text ? `<span class="post">Send</span>` : ``}
+        ${text ? `<span class="r">Reply</span>` : `<span class="post">Send</span>`}
         ${subc ? `<span class="c">Collapse</span>` : ``}
+        ${gIsAdmin ? `<span class="ban">Block</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${html}</div>
       ${subc ? `<div class="sub">${subc}</div>` : ``}

@@ -61,6 +61,13 @@ async function getSupercop(): Promise<Supercop> {
   return gSupercop;
 }
 
+function hasUserKeys() {
+  let pubKey = gPublicKeyLS.text;
+  let secKey = gSecretKeyLS.text;
+
+  return !!pubKey && !!secKey;
+}
+
 async function getUserKeys() {
   if (gUserKeys) return gUserKeys;
 
@@ -153,6 +160,7 @@ export const gUser = {
   signComment,
   verifyComment,
   deriveFilterId,
+  hasUserKeys,
   getPublicKey,
   username: new UserNameProp,
 };

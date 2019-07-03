@@ -53,13 +53,18 @@ body.mobile {
   margin-right: 5pt;
 }
 
-.cm > .hd > .r, .c, .post {
+.cm > .hd > .r, .c, .post, .ban {
   text-decoration: underline;
   cursor: pointer;
 }
 
 .cm > .hd > .post {
   font-weight: bold;
+}
+
+.cm > .hd > .ban {
+  font-weight: bold;
+  color: red;
 }
 
 .cm > .sub {

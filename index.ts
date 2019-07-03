@@ -1,4 +1,4 @@
-import { log } from 'src/log';
+import { tagged } from 'src/log';
 import { gConfig } from 'src/config';
 import { gWatchlist } from 'src/watchlist';
 import { gCache } from 'src/cache';
@@ -9,6 +9,7 @@ import { gStorage } from 'src/storage';
 import { gUser } from 'src/user';
 import * as dmode from 'src/dmode';
 
+const CSS_CLASS_ADMIN = 'admin'; // <body>
 const LS_DRAFTS_KEY = 'sys.drafts';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -17,11 +18,13 @@ const COMMENT_USERNAME_PATTERN = /^User: (.+)$/m;
 const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
 const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 
+let log = tagged('ui').tagged('main');
 let gURL = null;
 let gTopic = null; // SHA1
 let gComments = null; // sha1 -> data
 let gDrafts = gStorage.getEntry(LS_DRAFTS_KEY);
 let gDraftsTimer = 0;
+let gIsAdmin = false;
 
 const $ = (selector: string): HTMLElement => document.querySelector(selector);
 
@@ -39,7 +42,7 @@ export function init() {
   $.count = $('#comments-count') as HTMLAnchorElement;
 
   if (gConfig.ext)
-    log('Launched as the extension popup.');
+    log.i('Launched as the extension popup.');
 
   dmode.init(); // Switch to the dark mode, if necessary.
 
@@ -54,6 +57,7 @@ export function init() {
   window.onhashchange = async () => {
     try {
       await resetComments();
+      await loadAdminControls();
       await renderComments();
       await loadDrafts();
     } catch (err) {
@@ -64,6 +68,41 @@ export function init() {
   window.onhashchange(null);
 }
 
+async function loadAdminControls() {
+  gIsAdmin = false;
+
+  let filterId = gConfig.filterId.get();
+  let filterTag = gConfig.filterTag.get();
+
+  if (!filterId) return;
+  log.i('There is a ?filter=<...> set for this page');
+  log.i('Filter id:', filterId);
+  log.i('Filter tag:', filterTag);
+
+  if (!filterTag) {
+    log.w('?filter=<...> must come together with ?tag=<...>');
+    return;
+  }
+
+  if (!gUser.hasUserKeys()) {
+    log.i(`The user doesn't have ed25519 keys and thus can't be the admin.`);
+    return;
+  }
+
+  let adminFilterId = await gUser.deriveFilterId(filterTag);
+
+  if (adminFilterId == filterId)
+    gIsAdmin = true;
+
+  document.body.classList.toggle(CSS_CLASS_ADMIN, gIsAdmin);
+  log.i('Admin?', gIsAdmin);
+
+  if (!gIsAdmin) {
+    log.i('If this user was the admin, the filter id would be', adminFilterId);
+    return;
+  }
+}
+
 function logConfig() {
   let json = {};
   for (let name in gConfig)
@@ -72,7 +111,7 @@ function logConfig() {
 }
 
 function updateCommentState(chash) {
-  log('Updating comment state:', chash);
+  log.i('Updating comment state:', chash);
   let cdiv = findCommentDivByHash(chash);
   if (!cdiv) return;
   let hdiv = cdiv.querySelector('.hd');
@@ -102,7 +141,7 @@ function updateCommentsCount() {
 }
 
 function resetComments() {
-  log('Resetting comments.');
+  log.i('Resetting comments.');
   $.status.textContent = '';
   $.comments.innerHTML = '';
   $.count.textContent = 'Fetching comments...';
@@ -175,7 +214,7 @@ function saveDrafts() {
 
   if (updates > 0) {
     gDrafts.json = drafts;
-    log(`${updates} drafts updated in ${Date.now() - time} ms`);
+    log.i(`${updates} drafts updated in ${Date.now() - time} ms`);
   }
 }
 
@@ -250,7 +289,7 @@ function setCommentDraftFor(chash, ctext = '') {
 
 async function renderComments() {
   let topicId = location.hash.slice(1);
-  log('Rendering comments for topic:', topicId);
+  log.i('Rendering comments for topic:', topicId);
   if (!topicId) throw new Error('topic id is null');
 
   document.title = 'Comntr - ' + topicId;
@@ -266,7 +305,7 @@ async function renderComments() {
   if (!SHA1_PATTERN.test(topicId)) {
     gURL = topicId;
     topicId = await sha1(topicId);
-    log('sha1(topic):', topicId);
+    log.i('sha1(topic):', topicId);
   }
 
   gTopic = topicId;
@@ -285,7 +324,7 @@ function updateAllCommentStates() {
 async function markAllCommentsAsRead() {
   if (!await gWatchlist.isWatched(gTopic)) return;
   let size = Object.keys(gComments || {}).length;
-  log(`Marking all ${size} comments as read.`);
+  log.i(`Marking all ${size} comments as read.`);
   await gWatchlist.setSize(gTopic, size);
 }
 
@@ -297,7 +336,7 @@ async function handlePostCommentButtonClick(buttonAdd) {
   let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
   let text = divInput.textContent.trim();
   let phash = divParent ? divParent.id.slice(3) : gTopic;
-  log('Replying to', phash, 'with', text);
+  log.i('Replying to', phash, 'with', text);
 
   try {
     if (!text) throw new Error('Cannot send an empty comment.');
@@ -350,7 +389,7 @@ async function getComments(thash = gTopic) {
   try {
     let tcache = gCache.getTopic(thash);
     let xorhash = await tcache.getXorHash();
-    log('Cached xorhash:', xorhash);
+    log.i('Cached xorhash:', xorhash);
 
     let rcdata = await runAsyncStep(
       'Fetching comments.',
@@ -487,9 +526,9 @@ function makeCommentHtml({
       <div class="hd">
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
-        ${text ? `<span class="r">Reply</span>` : ``}
-        ${!text ? `<span class="post">Send</span>` : ``}
+        ${text ? `<span class="r">Reply</span>` : `<span class="post">Send</span>`}
         ${subc ? `<span class="c">Collapse</span>` : ``}
+        ${gIsAdmin ? `<span class="ban">Block</span>` : ``}
       </div>
       <div class="ct" ${!text ? `contenteditable` : ``}>${html}</div>
       ${subc ? `<div class="sub">${subc}</div>` : ``}

@@ -43,6 +43,11 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
         }
         return gSupercop;
     }
+    function hasUserKeys() {
+        let pubKey = gPublicKeyLS.text;
+        let secKey = gSecretKeyLS.text;
+        return !!pubKey && !!secKey;
+    }
     async function getUserKeys() {
         if (gUserKeys)
             return gUserKeys;
@@ -126,6 +131,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
         signComment,
         verifyComment,
         deriveFilterId,
+        hasUserKeys,
         getPublicKey,
         username: new UserNameProp,
     };

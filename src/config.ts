@@ -93,6 +93,12 @@ function msprop<T>(props: Prop<T>[], defval?: T): Prop<T> {
 export const gConfig = {
   ext: qprop('ext', false),
 
+  // filter.id = sha1(
+  //    sha1(user.keys.public) +
+  //    sha1(filter.tag))
+  filterTag: qprop<string>('tag'),
+  filterId: qprop<string>('filter'),
+
   // add-comment throttling: 0.99 would throttle 99% of attempts
   act: msprop<number>([
     qprop('act'),
