@@ -3,9 +3,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     Object.defineProperty(exports, "__esModule", { value: true });
     const N_USERID_CHARS = 7;
     const CSS_CLASS_ADMIN = 'admin'; // <body>
-    const CSS_CLASS_BLOCK = 'block'; // .cm.draft
+    const CSS_CLASS_BLOCK_COMMENT = 'block'; // .cm.draft.block
+    const CSS_CLASS_BANNED_COMMENT = 'blocked'; // .cm.banned
+    const CSS_CLASS_MY_COMMENT = 'mine'; // .cm.mine
     const CSS_BAN_USER_NOTE = 'ban-user-note'; // .cm.draft > .hd
     const CSS_COMMENT_HEADER = 'hd'; // .cm > .hd
+    const CSS_COMMENT_TEXT = 'ct'; // .cm > .ct
     const LS_DRAFTS_KEY = 'sys.drafts';
     const SHA1_PATTERN = /^[a-f0-9]{40}$/;
     const URL_PATTERN = /^https?:\/\//;
@@ -250,7 +253,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!userid)
             return log.w('No user id found for comment', chash);
         let draft = setCommentDraftFor(chash);
-        draft.classList.add(CSS_CLASS_BLOCK);
+        draft.classList.add(CSS_CLASS_BLOCK_COMMENT);
         let header = draft.querySelector(':scope > .' + CSS_COMMENT_HEADER);
         if (!header.querySelector(':scope > .' + CSS_BAN_USER_NOTE)) {
             let spanUserId = document.createElement('span');
@@ -262,6 +265,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 username,
             ].join(' ');
         }
+        let ctext = draft.querySelector(':scope > .' + CSS_COMMENT_TEXT);
+        ctext.focus();
     }
     async function getCommentAuthorInfo(chash) {
         let cdata = gComments[chash];
@@ -278,7 +283,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let comm = findCommentContainer(target);
         let chash = getCommentId(comm);
         let draft = setCommentDraftFor(chash);
-        draft.classList.remove(CSS_CLASS_BLOCK);
+        draft.classList.remove(CSS_CLASS_BLOCK_COMMENT);
         let ct = draft.querySelector('.ct');
         ct.focus();
     }
@@ -350,7 +355,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!isPostButton(buttonAdd))
             return;
         let divComment = findCommentContainer(buttonAdd);
-        let isBanRequest = divComment.classList.contains(CSS_CLASS_BLOCK);
+        let isBanRequest = divComment.classList.contains(CSS_CLASS_BLOCK_COMMENT);
         let divParent = findCommentContainer(divComment);
         let divInput = divComment.querySelector('.ct');
         let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
@@ -380,11 +385,15 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 headers,
             });
             divComment.remove();
-            let html = makeCommentHtml(parseCommentBody(body, hash));
-            let div = renderHtmlAsElement(html);
-            divSubc.insertBefore(div, divSubc.firstChild);
-            if (!isBanRequest)
+            if (isBanRequest) {
+                divParent.classList.add(CSS_CLASS_BANNED_COMMENT);
+            }
+            else {
+                let html = makeCommentHtml(parseCommentBody(body, hash));
+                let div = renderHtmlAsElement(html);
+                divSubc.insertBefore(div, divSubc.firstChild);
                 updateCommentsCount();
+            }
         }
         finally {
             buttonAdd.style.display = '';
@@ -454,6 +463,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             let comments = [];
             let byhash = {};
             let blocked = {};
+            let myPubKey = user_1.gUser.hasUserKeys() && await user_1.gUser.getPublicKey();
             await runAsyncStep('Generating html.', async () => {
                 for (let hash in gComments) {
                     try {
@@ -481,19 +491,20 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 log.i('Blocked comments:', Object.keys(blocked).length);
             });
             await runAsyncStep('Generating tree of comments.', async () => {
-                let tree = { [gTopic]: [] };
+                let tree = {};
+                tree[gTopic] = [];
                 for (let { hash, parent } of comments) {
                     tree[parent] = tree[parent] || [];
                     tree[parent].push(hash);
                 }
-                let render = phash => {
+                let render = (phash) => {
                     let htmls = [];
                     let hashes = tree[phash] || [];
-                    hashes.sort((h1, h2) => byhash[h2].date - byhash[h1].date);
+                    hashes.sort((h1, h2) => +byhash[h2].date - +byhash[h1].date);
                     for (let chash of hashes) {
                         let subc = render(chash);
                         let comm = byhash[chash];
-                        let html = makeCommentHtml(Object.assign({ blocked: !!blocked[chash], subc }, comm));
+                        let html = makeCommentHtml(Object.assign({ blocked: !!blocked[chash], isme: comm.pubkey == myPubKey, subc }, comm));
                         htmls.push(html);
                     }
                     return htmls.join('\n');
@@ -526,10 +537,15 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return div;
     }
     function makeCommentHtml({ user = null, text = '', // empty text means it's editable
-    blocked = false, date = null, hash = null, subc = '' }) {
-        let html = text.replace(/([<>])/gm, (_, ch) => '&#' + ch.charCodeAt(0) + ';');
+    blocked = false, isme = false, date = null, hash = null, subc = '' }) {
+        let html = text.replace(/([</&>])/gm, (_, ch) => '&#' + ch.charCodeAt(0) + ';');
+        let classes = ['cm'];
+        if (blocked)
+            classes.push(CSS_CLASS_BANNED_COMMENT);
+        if (isme)
+            classes.push(CSS_CLASS_MY_COMMENT);
         return `
-    <div class="cm ${blocked ? 'blocked' : ''}" ${hash ? `id="cm-${hash}"` : ``}>
+    <div class="${classes.join(' ')}" ${hash ? `id="cm-${hash}"` : ``}>
       <div class="hd">
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}

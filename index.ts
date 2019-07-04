@@ -11,9 +11,12 @@ import * as dmode from 'src/dmode';
 
 const N_USERID_CHARS = 7;
 const CSS_CLASS_ADMIN = 'admin'; // <body>
-const CSS_CLASS_BLOCK = 'block'; // .cm.draft
+const CSS_CLASS_BLOCK_COMMENT = 'block'; // .cm.draft.block
+const CSS_CLASS_BANNED_COMMENT = 'blocked'; // .cm.banned
+const CSS_CLASS_MY_COMMENT = 'mine'; // .cm.mine
 const CSS_BAN_USER_NOTE = 'ban-user-note'; // .cm.draft > .hd
 const CSS_COMMENT_HEADER = 'hd'; // .cm > .hd
+const CSS_COMMENT_TEXT = 'ct'; // .cm > .ct
 const LS_DRAFTS_KEY = 'sys.drafts';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -288,7 +291,7 @@ async function handleBlockButtonClick(target) {
   let { userid, username } = await getCommentAuthorInfo(chash);
   if (!userid) return log.w('No user id found for comment', chash);
   let draft = setCommentDraftFor(chash);
-  draft.classList.add(CSS_CLASS_BLOCK);
+  draft.classList.add(CSS_CLASS_BLOCK_COMMENT);
   let header = draft.querySelector(':scope > .' + CSS_COMMENT_HEADER);
 
   if (!header.querySelector(':scope > .' + CSS_BAN_USER_NOTE)) {
@@ -301,6 +304,9 @@ async function handleBlockButtonClick(target) {
       username,
     ].join(' ');
   }
+
+  let ctext = draft.querySelector(':scope > .' + CSS_COMMENT_TEXT) as HTMLElement;
+  ctext.focus();
 }
 
 async function getCommentAuthorInfo(chash: string) {
@@ -318,7 +324,7 @@ function handleReplyButtonClick(target) {
   let comm = findCommentContainer(target);
   let chash = getCommentId(comm);
   let draft = setCommentDraftFor(chash);
-  draft.classList.remove(CSS_CLASS_BLOCK);
+  draft.classList.remove(CSS_CLASS_BLOCK_COMMENT);
   let ct: HTMLElement = draft.querySelector('.ct');
   ct.focus();
 }
@@ -398,7 +404,7 @@ async function markAllCommentsAsRead() {
 async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
   if (!isPostButton(buttonAdd)) return;
   let divComment = findCommentContainer(buttonAdd);
-  let isBanRequest = divComment.classList.contains(CSS_CLASS_BLOCK);
+  let isBanRequest = divComment.classList.contains(CSS_CLASS_BLOCK_COMMENT);
   let divParent = findCommentContainer(divComment);
   let divInput = divComment.querySelector('.ct');
   let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
@@ -435,11 +441,15 @@ async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
     });
 
     divComment.remove();
-    let html = makeCommentHtml(parseCommentBody(body, hash));
-    let div = renderHtmlAsElement(html);
-    divSubc.insertBefore(div, divSubc.firstChild);
 
-    if (!isBanRequest) updateCommentsCount();
+    if (isBanRequest) {
+      divParent.classList.add(CSS_CLASS_BANNED_COMMENT);
+    } else {
+      let html = makeCommentHtml(parseCommentBody(body, hash));
+      let div = renderHtmlAsElement(html);
+      divSubc.insertBefore(div, divSubc.firstChild);
+      updateCommentsCount();
+    }
   } finally {
     buttonAdd.style.display = '';
   }
@@ -531,9 +541,10 @@ async function getComments(thash = gTopic) {
     gComments = await loadComments(thash);
     updateCommentsCount();
 
-    let comments = [];
-    let byhash = {};
-    let blocked = {};
+    let comments: ParsedCommentInfo[] = [];
+    let byhash: { [chash: string]: ParsedCommentInfo } = {};
+    let blocked: { [chash: string]: boolean } = {};
+    let myPubKey = gUser.hasUserKeys() && await gUser.getPublicKey();
 
     await runAsyncStep(
       'Generating html.',
@@ -569,22 +580,27 @@ async function getComments(thash = gTopic) {
     await runAsyncStep(
       'Generating tree of comments.',
       async () => {
-        let tree = { [gTopic]: [] };
+        let tree: { [chash: string]: string[] } = {};
+        tree[gTopic] = [];
 
         for (let { hash, parent } of comments) {
           tree[parent] = tree[parent] || [];
           tree[parent].push(hash);
         }
 
-        let render = phash => {
+        let render = (phash: string) => {
           let htmls = [];
           let hashes = tree[phash] || [];
-          hashes.sort((h1, h2) => byhash[h2].date - byhash[h1].date);
+
+          hashes.sort((h1, h2) =>
+            +byhash[h2].date - +byhash[h1].date);
+
           for (let chash of hashes) {
             let subc = render(chash);
             let comm = byhash[chash];
             let html = makeCommentHtml({
               blocked: !!blocked[chash],
+              isme: comm.pubkey == myPubKey,
               subc,
               ...comm,
             });
@@ -601,7 +617,16 @@ async function getComments(thash = gTopic) {
   }
 }
 
-function parseCommentBody(body, hash) {
+interface ParsedCommentInfo {
+  user: string; // username
+  parent: string; // phash
+  text: string;
+  date: Date;
+  pubkey: string;
+  hash: string; // chash
+}
+
+function parseCommentBody(body: string, hash: string): ParsedCommentInfo {
   let [, date] = COMMENT_DATE_PATTERN.exec(body);
   let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
   let [, text] = COMMENT_BODY_PATTERN.exec(body);
@@ -627,15 +652,20 @@ function makeCommentHtml({
   user = null,
   text = '', // empty text means it's editable
   blocked = false,
+  isme = false,
   date = null,
   hash = null,
   subc = '' }) {
 
-  let html = text.replace(/([<>])/gm,
+  let html = text.replace(/([</&>])/gm,
     (_, ch) => '&#' + ch.charCodeAt(0) + ';');
 
+  let classes = ['cm'];
+  if (blocked) classes.push(CSS_CLASS_BANNED_COMMENT);
+  if (isme) classes.push(CSS_CLASS_MY_COMMENT);
+
   return `
-    <div class="cm ${blocked ? 'blocked' : ''}" ${hash ? `id="cm-${hash}"` : ``}>
+    <div class="${classes.join(' ')}" ${hash ? `id="cm-${hash}"` : ``}>
       <div class="hd">
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}

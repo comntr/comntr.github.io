@@ -68,6 +68,10 @@ body.mobile {
   text-decoration: line-through;
 }
 
+.cm.mine > .hd > .u {
+  font-weight: bold;
+}
+
 .cm.blocked > .ct {
   color: #888;
   text-decoration: line-through;
@@ -89,6 +93,10 @@ body:not(.admin) .cm.blocked > .ct {
 .cm > .hd > .ban {
   font-weight: bold;
   color: #800;
+}
+
+.cm.blocked > .hd > .ban, .r {
+  display: none;
 }
 
 .cm > .sub {
