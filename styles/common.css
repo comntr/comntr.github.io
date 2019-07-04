@@ -64,12 +64,16 @@ body.mobile {
 }
 
 .cm.blocked > .hd > .u {
-  color: #800;
+  color: #888;
   text-decoration: line-through;
 }
 
 .cm.mine > .hd > .u {
-  font-weight: bold;
+  color: #0a0;
+}
+
+.cm.mine > .hd > .ban {
+  display: none;
 }
 
 .cm.blocked > .ct {
@@ -81,7 +85,10 @@ body:not(.admin) .cm.blocked > .ct {
   display: none;
 }
 
-.cm > .hd > .r, .c, .post, .ban {
+.cm > .hd > .r,
+.cm > .hd > .c,
+.cm > .hd > .post,
+.cm > .hd > .ban {
   text-decoration: underline;
   cursor: pointer;
 }
@@ -95,10 +102,21 @@ body:not(.admin) .cm.blocked > .ct {
   color: #800;
 }
 
-.cm.blocked > .hd > .ban, .r {
+.cm.blocked > .hd > .ban,
+.cm.blocked > .hd > .r {
   display: none;
 }
 
 .cm > .sub {
   padding-left: 1em;
+}
+
+.cm > .hd > .st[state="failed"] {
+  background: #c00;
+  color: #fff;
+}
+
+.cm > .hd > .st[state="sent"] {
+  background: #0c0;
+  color: #fff;
 }

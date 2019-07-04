@@ -157,4 +157,9 @@ export const gConfig = {
     qprop('qs'),
     lsprop('stats.ui.step.qps', 0.25),
   ]),
+
+  verifySignatures: msprop<boolean>([
+    qprop('vs'),
+    lsprop('user.ui.sign.verify', false),
+  ]),
 };

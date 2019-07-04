@@ -24,15 +24,6 @@
   color: #888;
 }
 
-.cm > .hd > .st[state="failed"] {
-  color: #f00;
-  background: #ff0;
-}
-
-.cm > .hd > .st[state="sent"] {
-  color: #0f0;
-}
-
 .cm > .hd > .post {
   color: #000;
 }

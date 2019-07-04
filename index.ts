@@ -536,6 +536,24 @@ async function loadComments(thash: string) {
   return comments;
 }
 
+async function isCommentBlocked(info: ParsedCommentInfo) {
+  let { pubkey } = info;
+  if (!pubkey) return true;
+
+  if (gBlockedUsers) {
+    let userid = await sha1(pubkey);
+    if (gBlockedUsers[userid])
+      return true;
+  }
+
+  if (gConfig.verifySignatures.get()) {
+    let hasValidSignature = await gUser.verifyComment(info.cdata);
+    if (!hasValidSignature) return true;
+  }
+
+  return false;
+}
+
 async function getComments(thash = gTopic) {
   try {
     gComments = await loadComments(thash);
@@ -564,14 +582,14 @@ async function getComments(thash = gTopic) {
     await runAsyncStep(
       'Looking for blocked users.',
       async () => {
-        if (!gBlockedUsers) return;
-
         for (let chash in byhash) {
-          let { pubkey } = byhash[chash];
-          if (!pubkey) continue;
-          let userid = await sha1(pubkey);
-          if (gBlockedUsers[userid])
-            blocked[chash] = true;
+          let info = byhash[chash];
+          try {
+            let isBlocked = await isCommentBlocked(info);
+            blocked[chash] = isBlocked;
+          } catch (err) {
+            log.e(err);
+          }
         }
 
         log.i('Blocked comments:', Object.keys(blocked).length);
@@ -618,6 +636,7 @@ async function getComments(thash = gTopic) {
 }
 
 interface ParsedCommentInfo {
+  cdata: string;
   user: string; // username
   parent: string; // phash
   text: string;
@@ -632,7 +651,7 @@ function parseCommentBody(body: string, hash: string): ParsedCommentInfo {
   let [, text] = COMMENT_BODY_PATTERN.exec(body);
   let [, user = null] = COMMENT_USERNAME_PATTERN.exec(body) || [];
   let [, pubkey = null] = COMMENT_USERKEY_PATTERN.exec(body) || [];
-  return { user, date: new Date(date), parent, text, hash, pubkey };
+  return { cdata: body, user, date: new Date(date), parent, text, hash, pubkey };
 }
 
 function findCommentDivByHash(chash) {

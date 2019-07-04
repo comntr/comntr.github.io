@@ -53,19 +53,19 @@ body {
   color: #888;
 }
 
-.cm > .hd > .st[state="failed"] {
-    color: #f00;
-    background: #ff0;
-}
-
-.cm > .hd > .st[state="sent"] {
-    color: #0f0;
-}
-
 .cm > .ct:empty:not(:focus)::before {
     color: #888;
 }
 
 .cm > .sub {
     border-left: 2pt dashed #a95f00;
+}
+
+.cm > .hd > .ban {
+  color: #c00;
+}
+
+.cm > .hd > .st[state="sent"] {
+  background: #080;
+  color: #fff;
 }

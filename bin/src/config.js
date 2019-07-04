@@ -143,6 +143,10 @@ define(["require", "exports"], function (require, exports) {
             qprop('qs'),
             lsprop('stats.ui.step.qps', 0.25),
         ]),
+        verifySignatures: msprop([
+            qprop('vs'),
+            lsprop('user.ui.sign.verify', false),
+        ]),
     };
 });
 //# sourceMappingURL=config.js.map
