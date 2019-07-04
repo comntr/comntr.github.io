@@ -34,15 +34,14 @@ class LRUCache {
   getTopic(thash: string) {
     let topic = this.topics.get(thash);
 
-    if (topic) {
-      let i = this.thashes.findIndex(h => h == thash);
-      this.thashes.splice(i, 1);
-    } else {
+    if (!topic) {
       log('Initializing topic cache:', thash);
       topic = new CachedTopic(thash);
       this.topics.set(thash, topic);
     }
 
+    let i = this.thashes.indexOf(thash);
+    if (i >= 0) this.thashes.splice(i, 1);
     this.thashes.push(thash);
 
     let diff = this.thashes.length - gConfig.lrucap.get();

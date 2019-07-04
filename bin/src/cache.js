@@ -22,15 +22,14 @@ define(["require", "exports", "src/hashutil", "src/log", "src/storage", "src/db"
         }
         getTopic(thash) {
             let topic = this.topics.get(thash);
-            if (topic) {
-                let i = this.thashes.findIndex(h => h == thash);
-                this.thashes.splice(i, 1);
-            }
-            else {
+            if (!topic) {
                 log_1.log('Initializing topic cache:', thash);
                 topic = new CachedTopic(thash);
                 this.topics.set(thash, topic);
             }
+            let i = this.thashes.indexOf(thash);
+            if (i >= 0)
+                this.thashes.splice(i, 1);
             this.thashes.push(thash);
             let diff = this.thashes.length - config_1.gConfig.lrucap.get();
             if (diff > 0) {
