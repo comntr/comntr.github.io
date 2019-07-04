@@ -62,6 +62,7 @@ export function init() {
     try {
       await resetComments();
       await initAdminMode();
+      await loadBanList();
       await renderComments();
       await loadDrafts();
     } catch (err) {
@@ -70,6 +71,12 @@ export function init() {
   };
 
   window.onhashchange(null);
+}
+
+async function loadBanList() {
+  let filterid = gConfig.filterId.get();
+  if (!filterid) return;
+  log.i('Loading blocked comments from:', filterid);
 }
 
 async function initAdminMode() {
@@ -443,63 +450,68 @@ async function runAsyncStep<T>(label, fn: () => Promise<T>) {
   return res;
 }
 
-async function getComments(thash = gTopic) {
+async function loadComments(thash: string) {
   if (!SHA1_PATTERN.test(thash))
     throw new Error('Invalid topic id: ' + thash);
 
+  let tcache = gCache.getTopic(thash);
+  let xorhash = await tcache.getXorHash();
+  let comments = {};
+
+  log.i('Cached xorhash:', xorhash);
+
+  let rcdata = await runAsyncStep(
+    'Fetching comments.',
+    async () => {
+      try {
+        return await gDataServer.fetchComments(thash, xorhash);
+      } catch (err) {
+        log.e('Failed to get comments:', err);
+        return [];
+      }
+    });
+
+  let rchashes = await runAsyncStep(
+    `Computing SHA1 for the ${rcdata.length} fetched comments.`,
+    () => Promise.all(rcdata.map(sha1)));
+
+  let chashes = await runAsyncStep(
+    'Getting comment hashes from the DB.',
+    () => tcache.getCommentHashes());
+
+  await runAsyncStep(
+    'Reading comment data from the DB.',
+    async () => {
+      for (let chash of chashes) {
+        let cbody = await tcache.getCommentData(chash);
+        comments[chash] = cbody;
+      }
+    });
+
+  await runAsyncStep(
+    'Saving new comments to the DB.',
+    async () => {
+      for (let i = 0; i < rchashes.length; i++) {
+        let data = rcdata[i];
+        let hash = rchashes[i];
+
+        if (comments[hash]) continue;
+
+        comments[hash] = data;
+        await tcache.addComment(hash, data);
+      }
+    });
+
+  await runAsyncStep(
+    'Updating the xorhash.',
+    () => tcache.setCommentHashes(Object.keys(comments)));
+
+  return comments;
+}
+
+async function getComments(thash = gTopic) {
   try {
-    let tcache = gCache.getTopic(thash);
-    let xorhash = await tcache.getXorHash();
-    log.i('Cached xorhash:', xorhash);
-
-    let rcdata = await runAsyncStep(
-      'Fetching comments.',
-      async () => {
-        try {
-          return await gDataServer.fetchComments(thash, xorhash);
-        } catch (err) {
-          log.e('Failed to get comments:', err);
-          $.status.textContent = 'Failed to download comments: ' + err;
-          return [];
-        }
-      });
-
-    let rchashes = await runAsyncStep(
-      `Computing SHA1 for the ${rcdata.length} fetched comments.`,
-      () => Promise.all(rcdata.map(sha1)));
-
-    let chashes = await runAsyncStep(
-      'Getting comment hashes from the DB.',
-      () => tcache.getCommentHashes());
-
-    await runAsyncStep(
-      'Reading comment data from the DB.',
-      async () => {
-        gComments = {};
-        for (let chash of chashes) {
-          let cbody = await tcache.getCommentData(chash);
-          gComments[chash] = cbody;
-        }
-      });
-
-    await runAsyncStep(
-      'Saving new comments to the DB.',
-      async () => {
-        for (let i = 0; i < rchashes.length; i++) {
-          let data = rcdata[i];
-          let hash = rchashes[i];
-
-          if (gComments[hash]) continue;
-
-          gComments[hash] = data;
-          await tcache.addComment(hash, data);
-        }
-      });
-
-    await runAsyncStep(
-      'Updating the xorhash.',
-      () => tcache.setCommentHashes(Object.keys(gComments)));
-
+    gComments = await loadComments(thash);
     updateCommentsCount();
 
     let comments = [];
