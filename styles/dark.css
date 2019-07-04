@@ -16,8 +16,8 @@ body {
 }
 
 #pii-notice {
-  border-color: #47d33c;
-    background: #cc8000;
+  border-color: #840;
+  background: #cc8000;
 }
 
 #controls {
@@ -44,21 +44,9 @@ body {
     color: #e1e1e1;
 }
 
-.cm.draft {
-  
-}
-
-.cm.block {
-  outline: 1px dashed red;
-}
-
 .cm.draft .u {
     color: white;
     background: #286291;
-}
-
-.cm.draft .ct {
-
 }
 
 .cm > .hd {

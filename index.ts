@@ -12,6 +12,8 @@ import * as dmode from 'src/dmode';
 const N_USERID_CHARS = 7;
 const CSS_CLASS_ADMIN = 'admin'; // <body>
 const CSS_CLASS_BLOCK = 'block'; // .cm.draft
+const CSS_BAN_USER_NOTE = 'ban-user-note'; // .cm.draft > .hd
+const CSS_COMMENT_HEADER = 'hd'; // .cm > .hd
 const LS_DRAFTS_KEY = 'sys.drafts';
 const SHA1_PATTERN = /^[a-f0-9]{40}$/;
 const URL_PATTERN = /^https?:\/\//;
@@ -180,7 +182,7 @@ function getCommentId(x) {
   return isCommentContainer(x) ? x.id.slice(3) : null;
 }
 
-function findCommentContainer(target) {
+function findCommentContainer(target: HTMLElement): HTMLElement {
   let comm = target.parentElement;
   while (comm && !isCommentContainer(comm))
     comm = comm.parentElement;
@@ -205,7 +207,7 @@ function saveDrafts() {
   let drafts = gDrafts.json || {};
   let updates = 0;
 
-  divs.forEach(cmDraft => {
+  divs.forEach((cmDraft: HTMLElement) => {
     let cmParent = findCommentContainer(cmDraft);
     let chash = cmParent ? getCommentId(cmParent) : gTopic;
     let ctext = cmDraft.querySelector('.ct').textContent.trim();
@@ -244,7 +246,7 @@ function handleCommentsAreaClick(target) {
 function handleCollapseButtonClick(target) {
   if (!isCollapseButton(target)) return;
   let comm = findCommentContainer(target);
-  let subc = comm.querySelector('.sub');
+  let subc: HTMLElement = comm.querySelector('.sub');
   if (subc) {
     let n = subc.querySelectorAll('.cm').length;
     let disp = subc.style.display;
@@ -258,26 +260,33 @@ async function handleBlockButtonClick(target) {
   if (!isBlockButton(target)) return;
   let comm = findCommentContainer(target);
   let chash = getCommentId(comm);
-  let userid = await getCommentAuthorId(chash);
-  if (!userid) {
-    log.w('No user id found for comment', chash);
-    return;
-  }
+  log.i('User comment:\n' + gComments[chash]);
+  let { userid, username } = await getCommentAuthorInfo(chash);
+  if (!userid) return log.w('No user id found for comment', chash);
   let draft = setCommentDraftFor(chash);
   draft.classList.add(CSS_CLASS_BLOCK);
-  let ct: HTMLElement = draft.querySelector('.ct');
-  ct.textContent = [
-    'Block-User: ' + userid.slice(0, N_USERID_CHARS),
-    'Reason: Just Cause',
-  ].join('\n');
+  let header = draft.querySelector(':scope > .' + CSS_COMMENT_HEADER);
+
+  if (!header.querySelector(':scope > .' + CSS_BAN_USER_NOTE)) {
+    let spanUserId = document.createElement('span');
+    spanUserId.className = CSS_BAN_USER_NOTE;
+    header.appendChild(spanUserId);
+    spanUserId.textContent = [
+      'User being blocked:',
+      userid.slice(0, N_USERID_CHARS),
+      username,
+    ].join(' ');
+  }
 }
 
-async function getCommentAuthorId(chash: string): Promise<string> {
+async function getCommentAuthorInfo(chash: string) {
   let cdata = gComments[chash];
-  let match = cdata && /^Public-Key: (\w+)$/m.exec(cdata);
-  let pubkey = match && match[1];
+  let pkMatch = cdata && /^Public-Key: (\w+)$/m.exec(cdata);
+  let unMatch = cdata && /^User: (\S+)$/m.exec(cdata);
+  let pubkey = pkMatch && pkMatch[1];
   let userid = pubkey && await sha1(pubkey);
-  return userid;
+  let username = unMatch && unMatch[1];
+  return { userid, username, pubkey };
 }
 
 function handleReplyButtonClick(target) {
@@ -362,41 +371,59 @@ async function markAllCommentsAsRead() {
   await gWatchlist.setSize(gTopic, size);
 }
 
-async function handlePostCommentButtonClick(buttonAdd) {
+async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
   if (!isPostButton(buttonAdd)) return;
   let divComment = findCommentContainer(buttonAdd);
+  let isBanRequest = divComment.classList.contains(CSS_CLASS_BLOCK);
   let divParent = findCommentContainer(divComment);
   let divInput = divComment.querySelector('.ct');
   let divSubc = divParent ? divParent.querySelector('.sub') : $.comments;
   let text = divInput.textContent.trim();
   let phash = divParent ? divParent.id.slice(3) : gTopic;
+  let banned = isBanRequest && await getCommentAuthorInfo(phash);
+
+  log.i('Block request?', isBanRequest);
   log.i('Replying to', phash, 'with', text);
 
   try {
-    if (!text) throw new Error('Cannot send an empty comment.');
+    if (!text) {
+      throw new Error('Cannot send an empty comment.');
+    }
+
     buttonAdd.style.display = 'none';
     let drafts = gDrafts.json || {};
     delete drafts[phash];
     gDrafts.json = drafts;
 
+    let topic = isBanRequest ?
+      gConfig.filterId.get() :
+      gTopic;
+
+    let headers = {
+      'Parent': phash,
+      'Blocked-User': isBanRequest && banned.userid,
+    };
+
     let { hash, body } = await gSender.postComment({
       text,
-      topic: gTopic,
-      parent: phash,
+      topic,
+      headers,
     });
 
-
+    divComment.remove();
     let html = makeCommentHtml(parseCommentBody(body, hash));
     let div = renderHtmlAsElement(html);
     divSubc.insertBefore(div, divSubc.firstChild);
-    divComment.remove();
-    updateCommentsCount();
+
+    if (!isBanRequest) updateCommentsCount();
   } finally {
     buttonAdd.style.display = '';
   }
 
-  await gWatchlist.add(gTopic, gURL);
-  await markAllCommentsAsRead();
+  if (!isBanRequest) {
+    await gWatchlist.add(gTopic, gURL);
+    await markAllCommentsAsRead();
+  }
 }
 
 function renderHtmlAsElement(html) {

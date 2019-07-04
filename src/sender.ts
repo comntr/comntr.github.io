@@ -11,10 +11,14 @@ import { gUser } from 'src/user';
 const LSKEY_PENDING = 'sys.staging.pending';
 const LSKEY_FAILED = 'sys.staging.failed';
 
+interface CommentHeaders {
+  [name: string]: string;
+}
+
 interface PostCommentArgs {
   text: string;
   topic: string;
-  parent: string;
+  headers: CommentHeaders;
 }
 
 interface PostRandomCommentsArgs {
@@ -58,9 +62,9 @@ class CommentSender {
     this.tryToSendComments();
   }
 
-  async postComment({ text, parent, topic }: PostCommentArgs) {
+  async postComment({ text, topic, headers }: PostCommentArgs) {
     log('Posting comment to', topic);
-    let body = await this.makeCommentBody({ text, parent });
+    let body = await this.makeCommentBody({ text, headers });
     let hash = await sha1(body);
     gComments[hash] = body;
     await this.cacheComment(topic, hash, body);
@@ -160,22 +164,33 @@ class CommentSender {
 
       let { hash } = await this.postComment({
         text: prefix + i,
-        parent: parent,
         topic: topic,
+        headers: { 'Parent': parent },
       });
 
       hashes.push(hash);
     }
   }
 
-  private async makeCommentBody({ text, parent }) {
-    let body = [
-      'Date: ' + new Date().toISOString(),
-      'User: ' + gUser.username.get(),
-      'Parent: ' + parent,
-      '',
-      text,
-    ].join('\n');
+  private async makeCommentBody({ text, headers }) {
+    let bodyHeaders = {
+      'Date': new Date().toISOString(),
+      'User': gUser.username.get(),
+      ...headers,
+    };
+
+    let bodyLines = [];
+
+    for (let name in bodyHeaders) {
+      let value = bodyHeaders[name];
+      if (value)
+        bodyLines.push(name + ': ' + value);
+    }
+
+    bodyLines.push('');
+    bodyLines.push(text);
+
+    let body = bodyLines.join('\n');
 
     try {
       log.i('Signing the comment.');

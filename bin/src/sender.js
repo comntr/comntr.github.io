@@ -18,9 +18,9 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             this.pt.start();
             this.tryToSendComments();
         }
-        async postComment({ text, parent, topic }) {
+        async postComment({ text, topic, headers }) {
             log_1.log('Posting comment to', topic);
-            let body = await this.makeCommentBody({ text, parent });
+            let body = await this.makeCommentBody({ text, headers });
             let hash = await hashutil_1.sha1(body);
             cache_1.gComments[hash] = body;
             await this.cacheComment(topic, hash, body);
@@ -106,20 +106,23 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
                 let parent = hashes[Math.random() * hashes.length | 0];
                 let { hash } = await this.postComment({
                     text: prefix + i,
-                    parent: parent,
                     topic: topic,
+                    headers: { 'Parent': parent },
                 });
                 hashes.push(hash);
             }
         }
-        async makeCommentBody({ text, parent }) {
-            let body = [
-                'Date: ' + new Date().toISOString(),
-                'User: ' + user_1.gUser.username.get(),
-                'Parent: ' + parent,
-                '',
-                text,
-            ].join('\n');
+        async makeCommentBody({ text, headers }) {
+            let bodyHeaders = Object.assign({ 'Date': new Date().toISOString(), 'User': user_1.gUser.username.get() }, headers);
+            let bodyLines = [];
+            for (let name in bodyHeaders) {
+                let value = bodyHeaders[name];
+                if (value)
+                    bodyLines.push(name + ': ' + value);
+            }
+            bodyLines.push('');
+            bodyLines.push(text);
+            let body = bodyLines.join('\n');
             try {
                 log_1.log.i('Signing the comment.');
                 body = await user_1.gUser.signComment(body);

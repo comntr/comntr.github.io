@@ -1,11 +1,11 @@
 body {
   font-family: Ubuntu, Arial, sans-serif;
-  font-size: 12pt;
+  font-size: 11pt;
   margin: 0.5em;
 }
 
 body.mobile {
-  font-size: 36pt;
+  font-size: 24pt;
 }
 
 #pii-notice {
@@ -41,6 +41,10 @@ body.mobile {
   content: 'Your comment...';
 }
 
+.cm.draft.block > .ct:empty:not(:focus)::before {
+  content: 'Why do you want to ban this user?';
+}
+
 .cm > .ct:focus {
   outline: none;
 }
@@ -52,6 +56,11 @@ body.mobile {
 
 .cm > .hd > * {
   margin-right: 5pt;
+}
+
+.cm > .hd > .ban-user-note {
+  background: #800;
+  color: #fff;
 }
 
 .cm > .hd > .r, .c, .post, .ban {
