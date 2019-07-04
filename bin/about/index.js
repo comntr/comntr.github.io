@@ -11,8 +11,7 @@ define(["require", "exports", "src/log", "src/user"], function (require, exports
         let publicKey = await user_1.gUser.getPublicKey();
         let filterTag = 'FooBar';
         let filterId = await user_1.gUser.deriveFilterId(filterTag);
-        let url = 'https://comntr.github.io'
-            + `?tag=${filterTag}&filter=${filterId}`;
+        let url = location.origin + `?tag=${filterTag}&filter=${filterId}`;
         $(ID_EXAMPLE).textContent = `
 <iframe id="comntr"
   referrerpolicy="no-referrer">

@@ -11,12 +11,15 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     const URL_PATTERN = /^https?:\/\//;
     const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
     const COMMENT_USERNAME_PATTERN = /^User: (.+)$/m;
+    const COMMENT_USERKEY_PATTERN = /^Public-Key: (.+)$/m;
     const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
+    const COMMENT_BLOCKED_USER_PATTERN = /^Blocked-User: (\w+)$/m;
     const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
     let log = log_1.tagged('ui').tagged('main');
     let gURL = null;
     let gTopic = null; // SHA1
     let gComments = null; // sha1 -> data
+    let gBlockedUsers = null; // sha1(pubkey) -> cdata
     let gDrafts = storage_1.gStorage.getEntry(LS_DRAFTS_KEY);
     let gDraftsTimer = 0;
     let gIsAdmin = false;
@@ -56,10 +59,25 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     }
     exports.init = init;
     async function loadBanList() {
-        let filterid = config_1.gConfig.filterId.get();
-        if (!filterid)
+        gBlockedUsers = null;
+        let filterId = config_1.gConfig.filterId.get();
+        if (!filterId)
             return;
-        log.i('Loading blocked comments from:', filterid);
+        log.i('Loading blocked comments from:', filterId);
+        let comments = await loadComments(filterId);
+        for (let ch in comments) {
+            let cdata = comments[ch];
+            let match = COMMENT_BLOCKED_USER_PATTERN.exec(cdata);
+            if (!match) {
+                log.w('Bad comment:', cdata);
+                continue;
+            }
+            let userid = match[1];
+            log.i('Banned userid:', userid);
+            if (!gBlockedUsers)
+                gBlockedUsers = {};
+            gBlockedUsers[userid] = cdata;
+        }
     }
     async function initAdminMode() {
         gIsAdmin = false;
@@ -435,6 +453,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             updateCommentsCount();
             let comments = [];
             let byhash = {};
+            let blocked = {};
             await runAsyncStep('Generating html.', async () => {
                 for (let hash in gComments) {
                     try {
@@ -447,6 +466,19 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                         log.e('Bad comment:', error);
                     }
                 }
+            });
+            await runAsyncStep('Looking for blocked users.', async () => {
+                if (!gBlockedUsers)
+                    return;
+                for (let chash in byhash) {
+                    let { pubkey } = byhash[chash];
+                    if (!pubkey)
+                        continue;
+                    let userid = await hashutil_1.sha1(pubkey);
+                    if (gBlockedUsers[userid])
+                        blocked[chash] = true;
+                }
+                log.i('Blocked comments:', Object.keys(blocked).length);
             });
             await runAsyncStep('Generating tree of comments.', async () => {
                 let tree = { [gTopic]: [] };
@@ -461,7 +493,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                     for (let chash of hashes) {
                         let subc = render(chash);
                         let comm = byhash[chash];
-                        let html = makeCommentHtml(Object.assign({}, comm, { subc }));
+                        let html = makeCommentHtml(Object.assign({ blocked: !!blocked[chash], subc }, comm));
                         htmls.push(html);
                     }
                     return htmls.join('\n');
@@ -479,7 +511,8 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
         let [, text] = COMMENT_BODY_PATTERN.exec(body);
         let [, user = null] = COMMENT_USERNAME_PATTERN.exec(body) || [];
-        return { user, date: new Date(date), parent, text, hash };
+        let [, pubkey = null] = COMMENT_USERKEY_PATTERN.exec(body) || [];
+        return { user, date: new Date(date), parent, text, hash, pubkey };
     }
     function findCommentDivByHash(chash) {
         return $('#cm-' + chash);
@@ -493,10 +526,10 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         return div;
     }
     function makeCommentHtml({ user = null, text = '', // empty text means it's editable
-    date = null, hash = null, subc = '' }) {
+    blocked = false, date = null, hash = null, subc = '' }) {
         let html = text.replace(/([<>])/gm, (_, ch) => '&#' + ch.charCodeAt(0) + ';');
         return `
-    <div class="cm" ${hash ? `id="cm-${hash}"` : ``}>
+    <div class="cm ${blocked ? 'blocked' : ''}" ${hash ? `id="cm-${hash}"` : ``}>
       <div class="hd">
         ${user ? `<span class="u">${user}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}

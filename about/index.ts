@@ -14,8 +14,7 @@ export async function init() {
   let publicKey = await gUser.getPublicKey();
   let filterTag = 'FooBar';
   let filterId = await gUser.deriveFilterId(filterTag);
-  let url = 'https://comntr.github.io'
-    + `?tag=${filterTag}&filter=${filterId}`;
+  let url = location.origin + `?tag=${filterTag}&filter=${filterId}`;
 
   $(ID_EXAMPLE).textContent = `
 <iframe id="comntr"

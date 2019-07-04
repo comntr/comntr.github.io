@@ -63,6 +63,20 @@ body.mobile {
   color: #fff;
 }
 
+.cm.blocked > .hd > .u {
+  color: #800;
+  text-decoration: line-through;
+}
+
+.cm.blocked > .ct {
+  color: #888;
+  text-decoration: line-through;
+}
+
+body:not(.admin) .cm.blocked > .ct {
+  display: none;
+}
+
 .cm > .hd > .r, .c, .post, .ban {
   text-decoration: underline;
   cursor: pointer;
@@ -74,7 +88,7 @@ body.mobile {
 
 .cm > .hd > .ban {
   font-weight: bold;
-  color: red;
+  color: #800;
 }
 
 .cm > .sub {
