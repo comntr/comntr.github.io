@@ -108,6 +108,16 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             log.i('If this user was the admin, the filter id would be', adminFilterId);
             return;
         }
+        try {
+            let rules = await dataserver_1.gDataServer.getRules(filterId);
+            let userid = await user_1.gUser.getUserId();
+            log.i('Current rules:', rules);
+            rules = { owner: userid };
+            await dataserver_1.gDataServer.setRules(filterId, rules);
+        }
+        catch (err) {
+            log.e('Failed to update rules:', err);
+        }
     }
     function logConfig() {
         let json = {};

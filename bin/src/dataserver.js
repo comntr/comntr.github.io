@@ -1,6 +1,7 @@
 define(["require", "exports", "./log", "./config"], function (require, exports, log_1, config_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    const log = log_1.tagged('srv.data');
     class HttpError extends Error {
         constructor(status, statusText) {
             super(status + ' ' + statusText);
@@ -13,13 +14,13 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
         async postComment(topicId, { hash, body }) {
             let host = config_1.gConfig.srv.get();
             let url = host + '/' + topicId + '/' + hash;
-            log_1.log('POST ' + url + '\n' + body);
+            log.i('POST ' + url + '\n' + body);
             if (config_1.gConfig.act.get() > 0 && Math.random() < config_1.gConfig.act.get())
                 throw new HttpError(567, 'Throttled with ?act=' + config_1.gConfig.act.get());
             let rsp = await fetch(url, { method: 'POST', body });
-            log_1.log(rsp.status + ' ' + rsp.statusText);
+            log.i(rsp.status + ' ' + rsp.statusText);
             if (!rsp.ok) {
-                log_1.log(await rsp.text());
+                log.i(await rsp.text());
                 throw new HttpError(rsp.status, rsp.statusText);
             }
         }
@@ -27,18 +28,18 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
             let host = config_1.gConfig.srv.get();
             let url = host + '/' + thash;
             let ctime = Date.now();
-            log_1.log(url);
+            log.i(url);
             let headers = new Headers;
             if (xorhash)
                 headers.append('If-None-Match', xorhash);
             let rsp = await fetch(url, { headers });
-            log_1.log(rsp.status + ' ' + rsp.statusText);
+            log.i(rsp.status + ' ' + rsp.statusText);
             if (rsp.status == 304) {
-                log_1.log('Request time (304 Not Modified):', Date.now() - ctime, 'ms');
+                log.i('Request time (304 Not Modified):', Date.now() - ctime, 'ms');
                 return [];
             }
             if (!rsp.ok) {
-                log_1.log(await rsp.text());
+                log.i(await rsp.text());
                 throw new HttpError(rsp.status, rsp.statusText);
             }
             let body = await rsp.text();
@@ -47,21 +48,45 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
             if (!boundary)
                 return [];
             let comments = body.split('\n--' + boundary[1] + '\n');
-            log_1.log('Request time:', Date.now() - ctime, 'ms');
+            log.i('Request time:', Date.now() - ctime, 'ms');
             return comments;
         }
         async fetchCommentsCount(topics) {
             let host = config_1.gConfig.srv.get();
             let url = host + '/rpc/GetCommentsCount';
             let body = JSON.stringify(topics);
-            log_1.log(url);
+            log.i(url);
             let rsp = await fetch(url, { method: 'POST', body });
-            log_1.log(rsp.status + ' ' + rsp.statusText);
+            log.i(rsp.status + ' ' + rsp.statusText);
             if (!rsp.ok) {
-                log_1.log(await rsp.text());
+                log.i(await rsp.text());
                 throw new HttpError(rsp.status, rsp.statusText);
             }
             return rsp.json();
+        }
+        async getRules(thash) {
+            let host = config_1.gConfig.srv.get();
+            let url = host + '/' + thash + '/rules';
+            let rsp = await fetch(url);
+            if (!rsp.ok) {
+                if (rsp.status == 404)
+                    return null;
+                log.i(await rsp.text());
+                throw new HttpError(rsp.status, rsp.statusText);
+            }
+            let json = rsp.json();
+            return json;
+        }
+        async setRules(thash, rules) {
+            let host = config_1.gConfig.srv.get();
+            let url = host + '/' + thash + '/rules';
+            let json = JSON.stringify(rules);
+            let rsp = await fetch(url, { method: 'POST', body: json });
+            if (!rsp.ok) {
+                log.i(await rsp.text());
+                throw new HttpError(rsp.status, rsp.statusText);
+            }
+            log.i('Rules updated:', thash, json);
         }
     }
     exports.gDataServer = new DataServer;

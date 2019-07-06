@@ -116,10 +116,13 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
             log_1.log.i('Updated username:', name);
         }
     }
-    async function deriveFilterId(tag) {
+    async function getUserId() {
         let keys = await getUserKeys();
+        return await hashutil_1.sha1(hashutil_1.a2hs(keys.publicKey));
+    }
+    async function deriveFilterId(tag) {
         return await hashutil_1.sha1([
-            await hashutil_1.sha1(hashutil_1.a2hs(keys.publicKey)),
+            await getUserId(),
             await hashutil_1.sha1(tag),
         ].join(''));
     }
@@ -130,6 +133,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
     exports.gUser = {
         signComment,
         verifyComment,
+        getUserId,
         deriveFilterId,
         hasUserKeys,
         getPublicKey,

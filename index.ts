@@ -132,6 +132,16 @@ async function initAdminMode() {
     log.i('If this user was the admin, the filter id would be', adminFilterId);
     return;
   }
+
+  try {
+    let rules = await gDataServer.getRules(filterId);
+    let userid = await gUser.getUserId();
+    log.i('Current rules:', rules);
+    rules = { owner: userid };
+    await gDataServer.setRules(filterId, rules);
+  } catch (err) {
+    log.e('Failed to update rules:', err);
+  }
 }
 
 function logConfig() {
