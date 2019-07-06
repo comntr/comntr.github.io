@@ -3,6 +3,8 @@ import { gUser } from 'src/user';
 import { a2hs } from 'src/hashutil';
 
 const ID_EXAMPLE = '#example';
+const ID_IFRAME = '#comntr';
+const ID_RIGHT_DIV = '#right';
 const ID_FILTER_TAG = '#filter-tag';
 const ID_PUBLIC_KEY = '#public-key';
 
@@ -16,16 +18,17 @@ export async function init() {
   let filterId = await gUser.deriveFilterId(filterTag);
   let url = location.origin + `?tag=${filterTag}&filter=${filterId}`;
 
-  $(ID_EXAMPLE).textContent = `
+  let html = `
 <iframe id="comntr"
   referrerpolicy="no-referrer">
 </iframe>
 <script>
   document.querySelector('#comntr').src =
-    '${url}' + '#' + location.host;
+    '${url}' + '#' + location.href;
 </script>
 `.trim();
 
+  $(ID_EXAMPLE).textContent = html;
   $(ID_FILTER_TAG).textContent = filterTag;
   $(ID_PUBLIC_KEY).textContent = publicKey;
 }

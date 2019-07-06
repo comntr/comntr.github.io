@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <title>About</title>
+  <title>Comntr - About</title>
   <link rel="stylesheet" href="index.css">
   <script src="/require.js"></script>
   <script>
@@ -18,7 +18,7 @@
     <p>With the <a href="https://github.com/comntr/webext">comntr</a> widget you can add
       comments to your website:</p>
     <p id="example">Loading...</p>
-    <p>Your Filter Id:
+    <p>Your Filter Tag:
       <span id="filter-tag"
         title="This can be any string. No problem if someone else chooses the same string. Comntr computes a hash of this string and mixes it with your public key."></span>
     </p>
@@ -38,7 +38,7 @@
     </iframe>
     <script>
       document.querySelector('#comntr').src =
-        'https://comntr.github.io?tag=FooBar&filter=67289caedafaec1e18ac4044c5e4b314b8ed1a44' + '#' + location.host;
+        'https://comntr.github.io?tag=FooBar&filter=0b17ca7438dfe961e13f1f5aa6da6faf302c3d4e' + '#' + location.href;
     </script>
   </div>
 </body>

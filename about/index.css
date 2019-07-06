@@ -24,6 +24,7 @@ body {
 #left > p {
   width: 75%;
   margin: 0.5em;
+  word-break: break-all;
 }
 
 #filter-tag,
