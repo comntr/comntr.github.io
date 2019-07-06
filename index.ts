@@ -138,7 +138,7 @@ async function initAdminMode() {
     let userid = await gUser.getUserId();
     log.i('Current rules:', rules);
     rules = { owner: userid };
-    await gDataServer.setRules(filterId, rules);
+    await gDataServer.setRules(filterId, filterTag, rules);
   } catch (err) {
     log.e('Failed to update rules:', err);
   }

@@ -88,6 +88,13 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
         comment = SIG_HEADER + ': ' + hashutil_1.a2hs(signature) + '\n' + comment;
         return comment;
     }
+    async function signText(text) {
+        let supercop = await getSupercop();
+        let keys = await getUserKeys();
+        let buffer = getTextBytes(text);
+        let signature = supercop.sign(buffer, keys.publicKey, keys.secretKey);
+        return hashutil_1.a2hs(signature);
+    }
     async function verifyComment(comment) {
         let regex = new RegExp(`^${SIG_HEADER}: (\\w+)\\n${PUBKEY_HEADER}: (\\w+)\\n`);
         let match = regex.exec(comment);
@@ -131,6 +138,7 @@ define(["require", "exports", "src/storage", "src/hashutil", "src/log", "./confi
         return hashutil_1.a2hs(keys.publicKey);
     }
     exports.gUser = {
+        signText,
         signComment,
         verifyComment,
         getUserId,

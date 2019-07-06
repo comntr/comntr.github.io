@@ -1,7 +1,10 @@
-define(["require", "exports", "./log", "./config"], function (require, exports, log_1, config_1) {
+define(["require", "exports", "./log", "./config", "./user"], function (require, exports, log_1, config_1, user_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const log = log_1.tagged('srv.data');
+    const H_FILTER_TAG = 'X-Tag';
+    const H_SIGNATURE = 'X-Signature';
+    const H_PUBKEY = 'X-Public-Key';
     class HttpError extends Error {
         constructor(status, statusText) {
             super(status + ' ' + statusText);
@@ -77,16 +80,22 @@ define(["require", "exports", "./log", "./config"], function (require, exports, 
             let json = rsp.json();
             return json;
         }
-        async setRules(thash, rules) {
+        async setRules(thash, tag, rules) {
             let host = config_1.gConfig.srv.get();
             let url = host + '/' + thash + '/rules';
-            let json = JSON.stringify(rules);
-            let rsp = await fetch(url, { method: 'POST', body: json });
+            let body = JSON.stringify(rules);
+            let pubkey = await user_1.gUser.getPublicKey();
+            let signature = await user_1.gUser.signText(body);
+            let headers = new Headers;
+            headers.append(H_FILTER_TAG, tag);
+            headers.append(H_PUBKEY, pubkey);
+            headers.append(H_SIGNATURE, signature);
+            let rsp = await fetch(url, { method: 'POST', body, headers });
             if (!rsp.ok) {
                 log.i(await rsp.text());
                 throw new HttpError(rsp.status, rsp.statusText);
             }
-            log.i('Rules updated:', thash, json);
+            log.i('Rules updated:', thash, rules);
         }
     }
     exports.gDataServer = new DataServer;

@@ -113,7 +113,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             let userid = await user_1.gUser.getUserId();
             log.i('Current rules:', rules);
             rules = { owner: userid };
-            await dataserver_1.gDataServer.setRules(filterId, rules);
+            await dataserver_1.gDataServer.setRules(filterId, filterTag, rules);
         }
         catch (err) {
             log.e('Failed to update rules:', err);

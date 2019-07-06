@@ -113,6 +113,14 @@ async function signComment(comment: string) {
   return comment;
 }
 
+async function signText(text: string): Promise<string> {
+  let supercop = await getSupercop();
+  let keys = await getUserKeys();
+  let buffer = getTextBytes(text);
+  let signature = supercop.sign(buffer, keys.publicKey, keys.secretKey);
+  return a2hs(signature);
+}
+
 async function verifyComment(comment: string) {
   let regex = new RegExp(`^${SIG_HEADER}: (\\w+)\\n${PUBKEY_HEADER}: (\\w+)\\n`);
   let match = regex.exec(comment);
@@ -161,6 +169,7 @@ async function getPublicKey(): Promise<string> {
 }
 
 export const gUser = {
+  signText,
   signComment,
   verifyComment,
   getUserId,

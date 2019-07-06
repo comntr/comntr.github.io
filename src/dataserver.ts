@@ -1,7 +1,12 @@
 import { tagged } from './log';
 import { gConfig } from './config';
+import { gUser } from './user';
 
 const log = tagged('srv.data');
+
+const H_FILTER_TAG = 'X-Tag';
+const H_SIGNATURE = 'X-Signature';
+const H_PUBKEY = 'X-Public-Key';
 
 export class HttpError extends Error {
   constructor(public status: number, public statusText: string) {
@@ -92,18 +97,26 @@ class DataServer {
     return json;
   }
 
-  async setRules(thash: string, rules: RulesSpec): Promise<void> {
+  async setRules(thash: string, tag: string, rules: RulesSpec): Promise<void> {
     let host = gConfig.srv.get();
     let url = host + '/' + thash + '/rules';
-    let json = JSON.stringify(rules);
-    let rsp = await fetch(url, { method: 'POST', body: json });
+    let body = JSON.stringify(rules);
+    let pubkey = await gUser.getPublicKey();
+    let signature = await gUser.signText(body);
+
+    let headers = new Headers;
+    headers.append(H_FILTER_TAG, tag);
+    headers.append(H_PUBKEY, pubkey);
+    headers.append(H_SIGNATURE, signature);
+
+    let rsp = await fetch(url, { method: 'POST', body, headers });
 
     if (!rsp.ok) {
       log.i(await rsp.text());
       throw new HttpError(rsp.status, rsp.statusText);
     }
 
-    log.i('Rules updated:', thash, json);
+    log.i('Rules updated:', thash, rules);
   }
 }
 
