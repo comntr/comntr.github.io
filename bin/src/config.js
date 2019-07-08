@@ -147,6 +147,10 @@ define(["require", "exports"], function (require, exports) {
             qprop('vs'),
             lsprop('user.ui.sign.verify', false),
         ]),
+        unlen: msprop([
+            qprop('unlen'),
+            lsprop('user.ui.username.maxlen', 20),
+        ]),
     };
 });
 //# sourceMappingURL=config.js.map

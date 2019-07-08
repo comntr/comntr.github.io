@@ -569,10 +569,15 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         let html = text.replace(/([</&>])/gm, (_, ch) => '&#' + ch.charCodeAt(0) + ';');
         return html;
     }
+    function escapeUsername(text) {
+        let maxlen = config_1.gConfig.unlen.get();
+        return text.slice(0, maxlen)
+            .replace(/[^\w-]/g, '_');
+    }
     function makeCommentHtml({ user = null, text = '', // empty text means it's editable
     blocked = false, isme = false, date = null, hash = null, subc = '' }) {
         let html = escapeHtml(text);
-        let userHtml = user && escapeHtml(user);
+        let userHtml = user && escapeUsername(user);
         let classes = ['cm'];
         if (blocked)
             classes.push(CSS_CLASS_BANNED_COMMENT);

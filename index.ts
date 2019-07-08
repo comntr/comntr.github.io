@@ -686,6 +686,12 @@ function escapeHtml(text: string) {
   return html;
 }
 
+function escapeUsername(text: string) {
+  let maxlen = gConfig.unlen.get();
+  return text.slice(0, maxlen)
+    .replace(/[^\w-]/g, '_');
+}
+
 function makeCommentHtml({
   user = null,
   text = '', // empty text means it's editable
@@ -696,7 +702,7 @@ function makeCommentHtml({
   subc = '' }) {
 
   let html = escapeHtml(text);
-  let userHtml = user && escapeHtml(user);
+  let userHtml = user && escapeUsername(user);
 
   let classes = ['cm'];
   if (blocked) classes.push(CSS_CLASS_BANNED_COMMENT);

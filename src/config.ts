@@ -162,4 +162,9 @@ export const gConfig = {
     qprop('vs'),
     lsprop('user.ui.sign.verify', false),
   ]),
+
+  unlen: msprop<number>([
+    qprop('unlen'),
+    lsprop('user.ui.username.maxlen', 20),
+  ]),
 };

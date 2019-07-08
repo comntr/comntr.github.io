@@ -63,13 +63,6 @@ body.mobile {
   color: #fff;
 }
 
-.cm > .hd > .u {
-  max-width: 7em;
-  overflow: hidden;
-  display: inline-block;
-  text-overflow: ellipsis;
-}
-
 .cm.blocked > .hd > .u {
   color: #888;
   text-decoration: line-through;
