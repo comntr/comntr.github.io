@@ -16,8 +16,12 @@ body {
 }
 
 #pii-notice {
-  border-color: #840;
-  background: #cc8000;
+  border-color: #e1e1e1;
+  color: #e1e1e1;
+}
+
+#pii-notice a {
+  color: inherit;
 }
 
 #controls {
