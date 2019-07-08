@@ -680,6 +680,12 @@ function createNewCommentDiv() {
   return div;
 }
 
+function escapeHtml(text: string) {
+  let html = text.replace(/([</&>])/gm,
+    (_, ch) => '&#' + ch.charCodeAt(0) + ';');
+  return html;
+}
+
 function makeCommentHtml({
   user = null,
   text = '', // empty text means it's editable
@@ -689,8 +695,8 @@ function makeCommentHtml({
   hash = null,
   subc = '' }) {
 
-  let html = text.replace(/([</&>])/gm,
-    (_, ch) => '&#' + ch.charCodeAt(0) + ';');
+  let html = escapeHtml(text);
+  let userHtml = user && escapeHtml(user);
 
   let classes = ['cm'];
   if (blocked) classes.push(CSS_CLASS_BANNED_COMMENT);
@@ -699,7 +705,7 @@ function makeCommentHtml({
   return `
     <div class="${classes.join(' ')}" ${hash ? `id="cm-${hash}"` : ``}>
       <div class="hd">
-        ${user ? `<span class="u">${user}</span>` : ``}
+        ${user ? `<span class="u">${userHtml}</span>` : ``}
         ${date ? `<span class="ts">${getRelativeTime(date)}</span>` : ``}
         ${text ? `<span class="r">Reply</span>` : `<span class="post">Send</span>`}
         ${subc ? `<span class="c">Collapse</span>` : ``}
