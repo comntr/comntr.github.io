@@ -3,6 +3,9 @@
 
 <head>
   <title>Comntr</title>
+  <!-- script-src 'unsafe-eval' is needed for wasm -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; connect-src 'self' https://comntr.live:42751; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'">
   <link rel="stylesheet" href="styles/common.css">
   <link rel="stylesheet" href="styles/light.css" id="dm-style">
   <script src="/src/css-mobile.js"></script>
