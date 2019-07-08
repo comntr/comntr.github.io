@@ -7,7 +7,7 @@ html, body {
 
 body {
   font-family: Ubuntu, Arial, sans-serif;
-  font-size: 14pt;
+  font-size: 12pt;
   display: flex;
   flex-direction: row;
 }
@@ -24,7 +24,6 @@ body {
 #left > p {
   width: 75%;
   margin: 0.5em;
-  word-break: break-all;
 }
 
 #filter-tag,

@@ -3,18 +3,21 @@ import { gUser } from 'src/user';
 import { a2hs } from 'src/hashutil';
 
 const ID_EXAMPLE = '#example';
-const ID_IFRAME = '#comntr';
-const ID_RIGHT_DIV = '#right';
 const ID_FILTER_TAG = '#filter-tag';
 const ID_PUBLIC_KEY = '#public-key';
 
 const $ = (sel: string): HTMLElement => document.querySelector(sel);
 const log = logger.tagged('about');
 
-export async function init() {
+export function init() {
   log.i('init()');
+  $(ID_FILTER_TAG).addEventListener('focusout', () => refresh());
+  refresh();
+}
+
+async function refresh() {
   let publicKey = await gUser.getPublicKey();
-  let filterTag = 'FooBar';
+  let filterTag = $(ID_FILTER_TAG).textContent;
   let filterId = await gUser.deriveFilterId(filterTag);
   let url = location.origin + `?tag=${filterTag}&filter=${filterId}`;
 
@@ -30,5 +33,6 @@ export async function init() {
 
   $(ID_EXAMPLE).textContent = html;
   $(ID_FILTER_TAG).textContent = filterTag;
-  $(ID_PUBLIC_KEY).textContent = publicKey;
+  $(ID_PUBLIC_KEY).textContent = publicKey.slice(0, 7) +
+    ' [' + publicKey.length / 2 + ' bytes]';
 }
