@@ -19,9 +19,9 @@ export interface RulesSpec {
 }
 
 class DataServer {
-  async postComment(topicId, { hash, body }) {
+  async postComment(topicId, { body }) {
     let host = gConfig.srv.get();
-    let url = host + '/' + topicId + '/' + hash;
+    let url = host + '/' + topicId;
     log.i('POST ' + url + '\n' + body);
 
     if (gConfig.act.get() > 0 && Math.random() < gConfig.act.get())

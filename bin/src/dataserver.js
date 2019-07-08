@@ -14,9 +14,9 @@ define(["require", "exports", "./log", "./config", "./user"], function (require,
     }
     exports.HttpError = HttpError;
     class DataServer {
-        async postComment(topicId, { hash, body }) {
+        async postComment(topicId, { body }) {
             let host = config_1.gConfig.srv.get();
-            let url = host + '/' + topicId + '/' + hash;
+            let url = host + '/' + topicId;
             log.i('POST ' + url + '\n' + body);
             if (config_1.gConfig.act.get() > 0 && Math.random() < config_1.gConfig.act.get())
                 throw new HttpError(567, 'Throttled with ?act=' + config_1.gConfig.act.get());

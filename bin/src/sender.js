@@ -69,7 +69,7 @@ define(["require", "exports", "src/event", "src/cache", "src/dataserver", "src/h
             let topic = this.pending[hash];
             let body = await cache_1.gCache.getTopic(topic).getCommentData(hash);
             try {
-                await dataserver_1.gDataServer.postComment(topic, { hash, body });
+                await dataserver_1.gDataServer.postComment(topic, { body });
                 log_1.log('Comment sent:', hash);
                 delete this.pending[hash];
                 this.flushCache();

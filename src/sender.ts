@@ -120,7 +120,7 @@ class CommentSender {
     let topic = this.pending[hash];
     let body = await gCache.getTopic(topic).getCommentData(hash);
     try {
-      await gDataServer.postComment(topic, { hash, body });
+      await gDataServer.postComment(topic, { body });
       log('Comment sent:', hash);
       delete this.pending[hash];
       this.flushCache();

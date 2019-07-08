@@ -137,8 +137,10 @@ async function initAdminMode() {
     let rules = await gDataServer.getRules(filterId);
     let userid = await gUser.getUserId();
     log.i('Current rules:', rules);
-    rules = { owner: userid };
-    await gDataServer.setRules(filterId, filterTag, rules);
+    if (!rules) {
+      rules = { owner: userid };
+      await gDataServer.setRules(filterId, filterTag, rules);
+    }
   } catch (err) {
     log.e('Failed to update rules:', err);
   }
@@ -457,6 +459,7 @@ async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
     } else {
       let html = makeCommentHtml(parseCommentBody(body, hash));
       let div = renderHtmlAsElement(html);
+      div.classList.add(CSS_CLASS_MY_COMMENT);
       divSubc.insertBefore(div, divSubc.firstChild);
       updateCommentsCount();
     }

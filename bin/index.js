@@ -112,8 +112,10 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             let rules = await dataserver_1.gDataServer.getRules(filterId);
             let userid = await user_1.gUser.getUserId();
             log.i('Current rules:', rules);
-            rules = { owner: userid };
-            await dataserver_1.gDataServer.setRules(filterId, filterTag, rules);
+            if (!rules) {
+                rules = { owner: userid };
+                await dataserver_1.gDataServer.setRules(filterId, filterTag, rules);
+            }
         }
         catch (err) {
             log.e('Failed to update rules:', err);
@@ -401,6 +403,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             else {
                 let html = makeCommentHtml(parseCommentBody(body, hash));
                 let div = renderHtmlAsElement(html);
+                div.classList.add(CSS_CLASS_MY_COMMENT);
                 divSubc.insertBefore(div, divSubc.firstChild);
                 updateCommentsCount();
             }
