@@ -23,9 +23,8 @@ export async function init() {
       let [stime, nreqs] = json[statName];
       let svg = makeSvg(stime, nreqs);
       div.innerHTML += `
-        <a href="${srv + '/stats/' + statName}">${statName}</a>
-        <div>min: ${Math.min(...nreqs)}; max: ${Math.max(...nreqs)}</div>
-        `;
+        <a href="${srv + '/stats/' + statName}">
+          ${statName}</a>`;
       div.innerHTML += svg;
     }
   } catch (err) {

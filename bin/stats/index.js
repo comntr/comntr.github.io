@@ -21,9 +21,8 @@ define(["require", "exports", "src/log", "src/config", "./svg"], function (requi
                 let [stime, nreqs] = json[statName];
                 let svg = svg_1.makeSvg(stime, nreqs);
                 div.innerHTML += `
-        <a href="${srv + '/stats/' + statName}">${statName}</a>
-        <div>min: ${Math.min(...nreqs)}; max: ${Math.max(...nreqs)}</div>
-        `;
+        <a href="${srv + '/stats/' + statName}">
+          ${statName}</a>`;
                 div.innerHTML += svg;
             }
         }

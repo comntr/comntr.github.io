@@ -8,19 +8,19 @@ body {
 .stat {
   margin: 5pt;
   padding: 5pt;
-  width: 100pt;
-  outline: 1px solid black;
+  width: 150pt;
 }
 
 .stat > svg {
-  width: 100pt;
-  height: 100pt;
+  width: 150pt;
+  height: 150pt;
 }
 
 .stat > a {
   word-wrap: break-word;
-  color: black;
+  color: #444;
   text-decoration: none;
+  margin-bottom: 1em;
 }
 
 .stat > a:hover {
