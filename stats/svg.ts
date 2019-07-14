@@ -8,22 +8,21 @@ const GRID_FONT_SIZE = 50;
 const GRID_LINE_COLOR = '#00f4';
 const GRID_LINE_WIDTH = 1;
 const GRID_LABEL_DIGITS = 3;
+const PATH_LINE_WIDTH = 1;
 
 export function makeSvg(stime: number, nreqs: number[]): string {
   let nsize = nreqs.length;
-  let qpsavg = [];
+  let qpsavg = new Array(nsize);
 
   for (let dt = 0; dt < nsize; dt++) {
     let i = (stime + 1 + dt) % nsize;
-    let j = dt / 60 | 0;
-    qpsavg[j] = qpsavg[j] || 0;
-    qpsavg[j] += nreqs[i] / 60;
+    qpsavg[dt] = nreqs[i];
   }
 
-  let qpsavgmax = Math.max(...qpsavg);
+  let qpsmax = Math.max(...qpsavg);
 
-  let w = qpsavg.length;
-  let h = !qpsavgmax ? 1 : 10 ** Math.ceil(Math.log10(qpsavgmax));
+  let w = nsize;
+  let h = Math.max(1, 10 ** Math.ceil(Math.log10(qpsmax)));
 
   let mpath = qpsavg
     .map((q, t) => `L ${t / w * GRID_W | 0} ${(1 - q / h) * GRID_H | 0}`)
@@ -40,9 +39,9 @@ export function makeSvg(stime: number, nreqs: number[]): string {
   });
 
   let vlines = makeVerLines({
-    xmin: -stime / 60 % 15,
+    xmin: -stime / 60 % 6,
     xmax: w,
-    xstep: 15,
+    xstep: 6 * 60,
     label: dm => new Date((stime - 3600 + dm * 60) * 1000)
       .toTimeString().slice(0, 5),
     ymin: 0,
@@ -50,7 +49,7 @@ export function makeSvg(stime: number, nreqs: number[]): string {
   });
 
   return `
-    <svg viewBox="-${GRID_LABEL_W} 0 ${GRID_W} ${GRID_H + GRID_LABEL_H}"
+    <svg viewBox="-${GRID_LABEL_W} 0 ${GRID_W + GRID_LABEL_W} ${GRID_H + GRID_LABEL_H}"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg">
 
@@ -75,7 +74,7 @@ export function makeSvg(stime: number, nreqs: number[]): string {
       <!-- graph -->
       <g>
         <path
-          stroke="black" stroke-width="2"
+          stroke="black" stroke-width="${PATH_LINE_WIDTH}"
           d="${mpath}"/>
       </g>
     </svg>`;
