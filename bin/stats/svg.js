@@ -19,7 +19,7 @@ define(["require", "exports", "src/config"], function (require, exports, config_
         }
         let qpsmax = Math.max(...qpsavg);
         let w = nsize;
-        let h = Math.max(1, 10 ** Math.ceil(Math.log10(qpsmax)));
+        let h = Math.max(1, qpsmax);
         let mpath = qpsavg
             .map((q, t) => `L ${t / w * GRID_W | 0} ${(1 - q / h) * GRID_H | 0}`)
             .join(' ')
