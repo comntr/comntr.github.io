@@ -3,7 +3,7 @@ define(["require", "exports", "src/log"], function (require, exports, logger) {
     Object.defineProperty(exports, "__esModule", { value: true });
     const $ = (sel) => document.querySelector(sel);
     const log = logger.tagged('captcha');
-    const HOST = 'http://127.0.0.1:2556';
+    const HOST = 'https://comntr.live:2556';
     const ID_QUESTION = '#question';
     const ID_ANSWER = '#answer';
     const ID_SIGNATURE = '#signature';
