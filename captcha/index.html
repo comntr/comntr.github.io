@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Comntr - Captcha</title>
+  <link rel="stylesheet" href="index.css">
+  <script src="/require.js"></script>
+  <script>
+    requirejs.config({ baseUrl: '/bin' });
+    window.onload =
+      () => requirejs(['captcha/index'],
+        mod => mod.init());
+  </script>
+</head>
+
+<body>
+  <img id="question" src="https://comntr.live:2556/question/"></img>
+  <div id="answer" contenteditable></div>
+  <button id="verify">Verify</button>
+  <div id="signature"></div>
+</body>
+
+</html>

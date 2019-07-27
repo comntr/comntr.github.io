@@ -1,0 +1,29 @@
+body {
+  font-size: 24pt;
+  font-family: Ubuntu;
+}
+
+body > * {
+  margin-bottom: 0.5em;
+}
+
+img {
+  height: 1em;
+}
+
+#answer {
+  min-height: 1em;
+  min-width: 10em;
+  outline: 1px solid #000;
+}
+
+#answer:empty::before {
+  content: 'Answer';
+  color: #888;
+}
+
+#signature {
+  word-wrap: break-word;
+}
+
+
