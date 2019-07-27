@@ -24,6 +24,10 @@ img {
 
 #signature {
   word-wrap: break-word;
+  font-size: 12pt;
 }
 
-
+#keys {
+  word-wrap: break-word;
+  font-size: 12pt;
+}
