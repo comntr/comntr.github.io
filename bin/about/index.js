@@ -19,7 +19,8 @@ define(["require", "exports", "src/log", "src/user"], function (require, exports
         let url = location.origin + `?tag=${filterTag}&filter=${filterId}`;
         let html = `
 <iframe id="comntr"
-  referrerpolicy="no-referrer">
+  referrerpolicy="no-referrer"
+  sandbox="allow-scripts allow-same-origin allow-popups">
 </iframe>
 <script>
   document.querySelector('#comntr').src =

@@ -16,32 +16,25 @@
 <body>
   <div id="left">
     <p>With the <a href="https://github.com/comntr/webext">comntr</a> widget you can add
-      comments to your website:</p>
+      comments to your page. Add this to your index.html:</p>
     <p id="example">Loading...</p>
-    <p>Your Filter Tag:
-      <span id="filter-tag" contenteditable title="This can be any string and is meant to be a short description of the filter for your records. No problem if someone else chooses the same string. Comntr computes a hash of this string and mixes it with your public key.">FooBar</span>
+    <p>Your <a href="https://github.com/comntr/webext/blob/master/docs/filters.md">filter</a> tag:
+      <span id="filter-tag" contenteditable
+        title="This can be any string and is meant to be a short description of the filter for your records. No problem if someone else chooses the same string. Comntr computes a hash of this string and mixes it with your public key.">FooBar</span>
     </p>
-    <p>Your Public Key:
-      <span id="public-key" title="This key allows to edit the filter. It's stored in localStorage. If you lose it, you won't be able to edit the filter, but you can always copy that filter to a new one and change the filter id on your page."></span>
+    <p>Your public key:
+      <span id="public-key"
+        title="This key allows to edit the filter. It's stored in localStorage. If you lose it, you won't be able to edit the filter, but you can always copy that filter to a new one and change the filter id on your page."></span>
     </p>
-    <p>Now anybody can post comments, but you can choose
-      to show only a subset of those comments.
-      Just like anyone has the right to say what they think about your
-      page, you have the right to not show any of those comments on your page.
-      Read more about <a href="https://github.com/comntr/webext/blob/master/docs/filters.md">comntr filters</a>.</p>
-
-    <p>The iframe on the right uses a filter id that I have a ed25519 private key for. This means that while anybody can
-      add comments, I can ban some of them. You can remove the filter id, or use <a
-        href="https://addons.mozilla.org/en-US/firefox/addon/comntr/">the browser extension</a>, to see all the
-      comments, even those that I chose to ban, or you can create your own filter id, put it on your page and ban
-      comments you don't like.
-    </p>
+    <p>Anybody can post comments, as long as they can solve a basic <a
+        href="https://github.com/comntr/webext/blob/master/docs/captcha.md">captcha</a>, only you can hide comments, as
+      long as you have the proper private key.</p>
+    <p>An advanced user may use the <a href="https://addons.mozilla.org/en-US/firefox/addon/comntr/">the comntr
+        extension</a> or just remove the filter tag from the iframe URL to see hidden comments.</p>
   </div>
 
   <div id="right">
-    <iframe id="comntr"
-      referrerpolicy="no-referrer"
-      sandbox="allow-scripts allow-same-origin allow-popups">
+    <iframe id="comntr" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups">
     </iframe>
     <script>
       document.querySelector('#comntr').src =

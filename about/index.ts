@@ -23,7 +23,8 @@ async function refresh() {
 
   let html = `
 <iframe id="comntr"
-  referrerpolicy="no-referrer">
+  referrerpolicy="no-referrer"
+  sandbox="allow-scripts allow-same-origin allow-popups">
 </iframe>
 <script>
   document.querySelector('#comntr').src =
