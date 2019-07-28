@@ -78,6 +78,8 @@ body.mobile {
 
 .cm > .captcha {
   display: flex;
+  color: #888;
+  background: #efe;
 }
 
 .cm > .captcha > img {
@@ -85,8 +87,12 @@ body.mobile {
   margin: 0 0.5em;
 }
 
+.cm > .captcha > .answer {
+  outline: 1px dashed #800;
+}
+
 .cm > .captcha > .answer:empty::before {
-  content: "Answer";
+  content: "answer";
   color: #888;
 }
 
@@ -94,6 +100,10 @@ body.mobile {
   cursor: pointer;
   font-weight: bold;
   text-decoration: underline;
+  margin-left: 0.5em;
+}
+
+.cm > .captcha > .status {
   margin-left: 0.5em;
 }
 

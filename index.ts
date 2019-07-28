@@ -24,6 +24,7 @@ const COMMENT_DATE_PATTERN = /^Date: (.+)$/m;
 const COMMENT_USERNAME_PATTERN = /^User: (.+)$/m;
 const COMMENT_USERKEY_PATTERN = /^Public-Key: (.+)$/m;
 const COMMENT_PARENT_PATTERN = /^Parent: (.+)$/m;
+const COMMENT_POSTMARK_PATTERN = /^Postmark: (.+)$/m;
 const COMMENT_BLOCKED_USER_PATTERN = /^Blocked-User: (\w+)$/m;
 const COMMENT_BODY_PATTERN = /\n\n([^\x00]+)/m;
 
@@ -432,10 +433,11 @@ async function addCaptchaPostmark(cbody: string, cdiv: HTMLElement): Promise<str
   cdiv.insertBefore(
     renderHtmlAsElement(`
       <div class="captcha">
-        <div class="note">Captcha:</div>
+        <div class="note">Prove you have brains:</div>
         <img src="${qurl}">
         <div class="answer" contenteditable></div>
         <div class="verify">Verify</div>
+        <div class="status"></div>
       </div>`),
     cdiv.querySelector(':scope > .ct'));
 
@@ -444,21 +446,26 @@ async function addCaptchaPostmark(cbody: string, cdiv: HTMLElement): Promise<str
       let target = event.target as HTMLElement;
       if (target.tagName == 'IMG') {
         let img = target as HTMLImageElement;
-        img.src = qurl + '?nonce=' + Math.random();
-      }
-      if (target.classList.contains('verify')) {
+        img.src = qurl + '?ts=' + Date.now();
+      } else if (target.classList.contains('verify')) {
         let answer = cdiv.querySelector(':scope > .captcha > .answer').textContent;
         let pmurl = gRules.captcha + '/postmark/' + chash + '?answer=' + answer;
+        let status = cdiv.querySelector(':scope > .captcha > .status');
         log.i('Verifying answer:', pmurl);
+        status.textContent = '';
         let res = await fetch(pmurl);
-        if (res.status != 200) {
-          log.i('Nice try:', res.status, res.statusText);
-          return;
+
+        if (res.status == 200) {
+
+          let sig = await res.text();
+          log.i('Answer accepted:', sig);
+          let phdr = 'Postmark: ' + sig;
+          resolve(phdr + '\n' + cbody);
+        } else {
+          log.i('Answer rejected:', res.status, res.statusText);
+          status.textContent = res.status == 401 ?
+            'You can do better' : res.status + ' ' + res.statusText;
         }
-        let sig = await res.text();
-        log.i('Answer accepted:', sig);
-        let phdr = 'Postmark: ' + sig;
-        resolve(phdr + '\n' + cbody);
       }
     });
   });
@@ -615,8 +622,14 @@ async function loadComments(thash: string) {
 }
 
 async function isCommentBlocked(info: ParsedCommentInfo) {
-  let { pubkey } = info;
-  if (!pubkey) return true;
+  let { pubkey, postmark } = info;
+
+  if (!pubkey) return true; // comments without sender's signature
+
+  if (gRules && gRules.captcha) {
+    if (!postmark) return true;
+    // TODO: Verify the postmark.
+  }
 
   if (gBlockedUsers) {
     let userid = await sha1(pubkey);
@@ -635,6 +648,7 @@ async function isCommentBlocked(info: ParsedCommentInfo) {
 async function getComments(thash = gTopic) {
   try {
     gComments = await loadComments(thash);
+    window['gComments'] = gComments;
     updateCommentsCount();
 
     let comments: ParsedCommentInfo[] = [];
@@ -721,15 +735,17 @@ interface ParsedCommentInfo {
   date: Date;
   pubkey: string;
   hash: string; // chash
+  postmark: string;
 }
 
 function parseCommentBody(body: string, hash: string): ParsedCommentInfo {
   let [, date] = COMMENT_DATE_PATTERN.exec(body);
   let [, parent] = COMMENT_PARENT_PATTERN.exec(body);
   let [, text] = COMMENT_BODY_PATTERN.exec(body);
+  let [, postmark = null] = COMMENT_POSTMARK_PATTERN.exec(body) || [];
   let [, user = null] = COMMENT_USERNAME_PATTERN.exec(body) || [];
   let [, pubkey = null] = COMMENT_USERKEY_PATTERN.exec(body) || [];
-  return { cdata: body, user, date: new Date(date), parent, text, hash, pubkey };
+  return { cdata: body, user, date: new Date(date), parent, text, hash, pubkey, postmark };
 }
 
 function findCommentDivByHash(chash) {
