@@ -16,15 +16,8 @@ interface CommentHeaders {
 }
 
 interface PostCommentArgs {
-  text: string;
+  body: string;
   topic: string;
-  headers: CommentHeaders;
-}
-
-interface PostRandomCommentsArgs {
-  topic?: string,
-  size?: number;
-  prefix?: string;
 }
 
 interface PendingComments {
@@ -62,16 +55,12 @@ class CommentSender {
     this.tryToSendComments();
   }
 
-  async postComment({ text, topic, headers }: PostCommentArgs) {
+  async postComment({ body, topic }: PostCommentArgs) {
     log('Posting comment to', topic);
-    let body = await this.makeCommentBody({ text, headers });
     let hash = await sha1(body);
-    gComments[hash] = body;
-    await this.cacheComment(topic, hash, body);
     this.stageComment(hash, topic);
     // tslint:disable-next-line:no-floating-promises
     this.tryToSendComment(hash);
-    return { hash, body };
   }
 
   getCommentState(chash: string) {
@@ -145,34 +134,15 @@ class CommentSender {
     }
   }
 
-  private async cacheComment(thash, chash, cbody) {
+  async cacheComment({ thash, chash, cbody }) {
+    gComments[chash] = cbody;
     let tcache = gCache.getTopic(thash);
     await tcache.addComment(chash, cbody);
     let chashes = await tcache.getCommentHashes();
     await tcache.setCommentHashes([chash, ...chashes]);
   }
 
-  private async postRandomComments({
-    size = 100,
-    topic = '',
-    prefix = 'test-',
-  }: PostRandomCommentsArgs = {}) {
-    let hashes = [topic];
-
-    for (let i = 0; i < size; i++) {
-      let parent = hashes[Math.random() * hashes.length | 0];
-
-      let { hash } = await this.postComment({
-        text: prefix + i,
-        topic: topic,
-        headers: { 'Parent': parent },
-      });
-
-      hashes.push(hash);
-    }
-  }
-
-  private async makeCommentBody({ text, headers }) {
+  async makeComment({ text, headers }) {
     let bodyHeaders = {
       'Date': new Date().toISOString(),
       'User': gUser.username.get(),

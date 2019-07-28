@@ -25,6 +25,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
     let gBlockedUsers = null; // sha1(pubkey) -> cdata
     let gDrafts = storage_1.gStorage.getEntry(LS_DRAFTS_KEY);
     let gDraftsTimer = 0;
+    let gRules = null;
     let gIsAdmin = false;
     const $ = (selector) => document.querySelector(selector);
     $.comments = null;
@@ -49,7 +50,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         window.onhashchange = async () => {
             try {
                 await resetComments();
-                await initAdminMode();
+                await initRules();
                 await loadBanList();
                 await renderComments();
                 await loadDrafts();
@@ -82,7 +83,7 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             gBlockedUsers[userid] = cdata;
         }
     }
-    async function initAdminMode() {
+    async function initRules() {
         gIsAdmin = false;
         let filterId = config_1.gConfig.filterId.get();
         let filterTag = config_1.gConfig.filterTag.get();
@@ -94,6 +95,12 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         if (!filterTag) {
             log.w('?filter=<...> must come together with ?tag=<...>');
             return;
+        }
+        try {
+            gRules = await dataserver_1.gDataServer.getRules(filterId);
+        }
+        catch (err) {
+            log.w('Failed to get rules:', err);
         }
         if (!user_1.gUser.hasUserKeys()) {
             log.i(`The user doesn't have ed25519 keys and thus can't be the admin.`);
@@ -109,12 +116,14 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
             return;
         }
         try {
-            let rules = await dataserver_1.gDataServer.getRules(filterId);
-            let userid = await user_1.gUser.getUserId();
-            log.i('Current rules:', rules);
-            if (!rules) {
-                rules = { owner: userid };
+            if (!gRules) {
+                let userid = await user_1.gUser.getUserId();
+                let rules = {
+                    owner: userid,
+                    captcha: config_1.gConfig.dcs.get(),
+                };
                 await dataserver_1.gDataServer.setRules(filterId, filterTag, rules);
+                gRules = rules;
             }
         }
         catch (err) {
@@ -363,6 +372,43 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
         log.i(`Marking all ${size} comments as read.`);
         await watchlist_1.gWatchlist.setSize(gTopic, size);
     }
+    async function addCaptchaPostmark(cbody, cdiv) {
+        if (!gRules || !gRules.captcha)
+            return cbody;
+        let chash = await hashutil_1.sha1(cbody);
+        let qurl = gRules.captcha + '/question/' + chash;
+        log.i('Getting captcha:', qurl);
+        cdiv.insertBefore(renderHtmlAsElement(`
+      <div class="captcha">
+        <div class="note">Captcha:</div>
+        <img src="${qurl}">
+        <div class="answer" contenteditable></div>
+        <div class="verify">Verify</div>
+      </div>`), cdiv.querySelector(':scope > .ct'));
+        return new Promise((resolve, reject) => {
+            cdiv.addEventListener('click', async (event) => {
+                let target = event.target;
+                if (target.tagName == 'IMG') {
+                    let img = target;
+                    img.src = qurl + '?nonce=' + Math.random();
+                }
+                if (target.classList.contains('verify')) {
+                    let answer = cdiv.querySelector(':scope > .captcha > .answer').textContent;
+                    let pmurl = gRules.captcha + '/postmark/' + chash + '?answer=' + answer;
+                    log.i('Verifying answer:', pmurl);
+                    let res = await fetch(pmurl);
+                    if (res.status != 200) {
+                        log.i('Nice try:', res.status, res.statusText);
+                        return;
+                    }
+                    let sig = await res.text();
+                    log.i('Answer accepted:', sig);
+                    let phdr = 'Postmark: ' + sig;
+                    resolve(phdr + '\n' + cbody);
+                }
+            });
+        });
+    }
     async function handlePostCommentButtonClick(buttonAdd) {
         if (!isPostButton(buttonAdd))
             return;
@@ -391,17 +437,27 @@ define(["require", "exports", "src/log", "src/config", "src/watchlist", "src/cac
                 'Parent': phash,
                 'Blocked-User': isBanRequest && banned.userid,
             };
-            let { hash, body } = await sender_1.gSender.postComment({
+            let cbody = await sender_1.gSender.makeComment({
                 text,
-                topic,
                 headers,
+            });
+            cbody = await addCaptchaPostmark(cbody, divComment);
+            let chash = await hashutil_1.sha1(cbody);
+            await sender_1.gSender.cacheComment({
+                thash: topic,
+                chash: chash,
+                cbody: cbody,
+            });
+            await sender_1.gSender.postComment({
+                body: cbody,
+                topic,
             });
             divComment.remove();
             if (isBanRequest) {
                 divParent.classList.add(CSS_CLASS_BANNED_COMMENT);
             }
             else {
-                let html = makeCommentHtml(parseCommentBody(body, hash));
+                let html = makeCommentHtml(parseCommentBody(cbody, chash));
                 let div = renderHtmlAsElement(html);
                 div.classList.add(CSS_CLASS_MY_COMMENT);
                 divSubc.insertBefore(div, divSubc.firstChild);

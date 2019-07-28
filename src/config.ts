@@ -110,6 +110,11 @@ export const gConfig = {
     lsprop('user.remote.url', 'https://comntr.live:42751'),
   ]),
 
+  dcs: msprop<string>([
+    qprop('dcs'),
+    lsprop('user.captcha.default', 'https://comntr.live:2556'),
+  ]),
+
   // interval in seconds between resending comments
   cri: msprop<number>([
     qprop('cri'),

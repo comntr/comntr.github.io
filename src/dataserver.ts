@@ -16,6 +16,7 @@ export class HttpError extends Error {
 
 export interface RulesSpec {
   owner?: string;
+  captcha?: string;
 }
 
 class DataServer {

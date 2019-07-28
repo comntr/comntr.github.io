@@ -2,7 +2,7 @@ import { tagged } from 'src/log';
 import { gConfig } from 'src/config';
 import { gWatchlist } from 'src/watchlist';
 import { gCache } from 'src/cache';
-import { gDataServer } from 'src/dataserver';
+import { gDataServer, RulesSpec } from 'src/dataserver';
 import { gSender } from 'src/sender';
 import { sha1 } from 'src/hashutil';
 import { gStorage } from 'src/storage';
@@ -34,6 +34,7 @@ let gComments: { [chash: string]: string } = null; // sha1 -> data
 let gBlockedUsers: { [userid: string]: string } = null; // sha1(pubkey) -> cdata
 let gDrafts = gStorage.getEntry(LS_DRAFTS_KEY);
 let gDraftsTimer = 0;
+let gRules: RulesSpec = null;
 let gIsAdmin = false;
 
 const $ = (selector: string): HTMLElement => document.querySelector(selector);
@@ -67,7 +68,7 @@ export function init() {
   window.onhashchange = async () => {
     try {
       await resetComments();
-      await initAdminMode();
+      await initRules();
       await loadBanList();
       await renderComments();
       await loadDrafts();
@@ -99,7 +100,7 @@ async function loadBanList() {
   }
 }
 
-async function initAdminMode() {
+async function initRules() {
   gIsAdmin = false;
 
   let filterId = gConfig.filterId.get();
@@ -113,6 +114,12 @@ async function initAdminMode() {
   if (!filterTag) {
     log.w('?filter=<...> must come together with ?tag=<...>');
     return;
+  }
+
+  try {
+    gRules = await gDataServer.getRules(filterId);
+  } catch (err) {
+    log.w('Failed to get rules:', err);
   }
 
   if (!gUser.hasUserKeys()) {
@@ -134,12 +141,14 @@ async function initAdminMode() {
   }
 
   try {
-    let rules = await gDataServer.getRules(filterId);
-    let userid = await gUser.getUserId();
-    log.i('Current rules:', rules);
-    if (!rules) {
-      rules = { owner: userid };
+    if (!gRules) {
+      let userid = await gUser.getUserId();
+      let rules: RulesSpec = {
+        owner: userid,
+        captcha: gConfig.dcs.get(),
+      };
       await gDataServer.setRules(filterId, filterTag, rules);
+      gRules = rules;
     }
   } catch (err) {
     log.e('Failed to update rules:', err);
@@ -413,6 +422,48 @@ async function markAllCommentsAsRead() {
   await gWatchlist.setSize(gTopic, size);
 }
 
+async function addCaptchaPostmark(cbody: string, cdiv: HTMLElement): Promise<string> {
+  if (!gRules || !gRules.captcha)
+    return cbody;
+
+  let chash = await sha1(cbody);
+  let qurl = gRules.captcha + '/question/' + chash;
+  log.i('Getting captcha:', qurl);
+  cdiv.insertBefore(
+    renderHtmlAsElement(`
+      <div class="captcha">
+        <div class="note">Captcha:</div>
+        <img src="${qurl}">
+        <div class="answer" contenteditable></div>
+        <div class="verify">Verify</div>
+      </div>`),
+    cdiv.querySelector(':scope > .ct'));
+
+  return new Promise((resolve, reject) => {
+    cdiv.addEventListener('click', async event => {
+      let target = event.target as HTMLElement;
+      if (target.tagName == 'IMG') {
+        let img = target as HTMLImageElement;
+        img.src = qurl + '?nonce=' + Math.random();
+      }
+      if (target.classList.contains('verify')) {
+        let answer = cdiv.querySelector(':scope > .captcha > .answer').textContent;
+        let pmurl = gRules.captcha + '/postmark/' + chash + '?answer=' + answer;
+        log.i('Verifying answer:', pmurl);
+        let res = await fetch(pmurl);
+        if (res.status != 200) {
+          log.i('Nice try:', res.status, res.statusText);
+          return;
+        }
+        let sig = await res.text();
+        log.i('Answer accepted:', sig);
+        let phdr = 'Postmark: ' + sig;
+        resolve(phdr + '\n' + cbody);
+      }
+    });
+  });
+}
+
 async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
   if (!isPostButton(buttonAdd)) return;
   let divComment = findCommentContainer(buttonAdd);
@@ -446,10 +497,24 @@ async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
       'Blocked-User': isBanRequest && banned.userid,
     };
 
-    let { hash, body } = await gSender.postComment({
+    let cbody = await gSender.makeComment({
       text,
-      topic,
       headers,
+    });
+
+    cbody = await addCaptchaPostmark(cbody, divComment);
+
+    let chash = await sha1(cbody);
+
+    await gSender.cacheComment({
+      thash: topic,
+      chash: chash,
+      cbody: cbody,
+    });
+
+    await gSender.postComment({
+      body: cbody,
+      topic,
     });
 
     divComment.remove();
@@ -457,7 +522,7 @@ async function handlePostCommentButtonClick(buttonAdd: HTMLElement) {
     if (isBanRequest) {
       divParent.classList.add(CSS_CLASS_BANNED_COMMENT);
     } else {
-      let html = makeCommentHtml(parseCommentBody(body, hash));
+      let html = makeCommentHtml(parseCommentBody(cbody, chash));
       let div = renderHtmlAsElement(html);
       div.classList.add(CSS_CLASS_MY_COMMENT);
       divSubc.insertBefore(div, divSubc.firstChild);

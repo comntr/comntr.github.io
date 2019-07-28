@@ -104,6 +104,10 @@ define(["require", "exports"], function (require, exports) {
             qprop('srv'),
             lsprop('user.remote.url', 'https://comntr.live:42751'),
         ]),
+        dcs: msprop([
+            qprop('dcs'),
+            lsprop('user.captcha.default', 'https://comntr.live:2556'),
+        ]),
         // interval in seconds between resending comments
         cri: msprop([
             qprop('cri'),

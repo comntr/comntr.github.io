@@ -5,7 +5,7 @@
     "lint": "node_modules/.bin/tslint --project tsconfig.json",
     "build": "npm i; npm run clean; node_modules/.bin/tsc; npm run cplibs",
     "cplibs": "rsync -a node_modules/supercop.wasm/src/* bin/supercop",
-    "server": "killall -q webfsd; sudo webfsd -F -l - -p 80 -r . -f index.html"
+    "webfsd": "killall -q webfsd; sudo webfsd -F -l - -p 80 -r . -f index.html"
   },
   "devDependencies": {
     "typescript": "3.5.1",

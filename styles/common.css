@@ -76,6 +76,27 @@ body.mobile {
   display: none;
 }
 
+.cm > .captcha {
+  display: flex;
+}
+
+.cm > .captcha > img {
+  height: 1em;
+  margin: 0 0.5em;
+}
+
+.cm > .captcha > .answer:empty::before {
+  content: "Answer";
+  color: #888;
+}
+
+.cm > .captcha > .verify {
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: underline;
+  margin-left: 0.5em;
+}
+
 .cm.blocked > .ct {
   color: #888;
   text-decoration: line-through;
